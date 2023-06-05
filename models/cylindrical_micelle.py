@@ -80,8 +80,8 @@ def Iq(q,
        sld_core=2,
        sld_corona=2,
        radius_core=40,
-       rg=10,
        length_core=100,
+       rg=10.0,
        d_penetration=1,
        n_aggreg=67
        ):

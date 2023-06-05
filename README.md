@@ -20,9 +20,8 @@ There two ways you can use this code:
 2. Using seperate notebooks for each one of them : see the examples in [notebooks folder](/notebooks)
 
 ### Known issues:
-1. For some reason, the code to compute cylindrical core micelle behaves unexpectedly when using sasmodels
-2. Form factors of worm-like and vesicle-shaped micelles doesn't work as expected.
-3. Polydispertisty parameters are not being properly processed when using sasmodels.
+1. Form factors of worm-like and vesicle-shaped micelles doesn't work as expected.
+2. Polydispertisty parameters are not being properly processed when using sasmodels.
 
 ### To-Do : 
 1. Implement example of optimization using bumps or other similar software
