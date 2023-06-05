@@ -33,8 +33,8 @@ parameters = [["v_core",    "Ang^3",  4000.0, [0.0, np.inf], "", "Volume of the 
               ["sld_solvent",  "Ang^-2",     1.0, [0.0, np.inf], "sld", "Solvent scattering length density"],
               ["sld_core",      "1e-6/Ang^2", 2.0, [0.0, np.inf], "sld", "Core scattering length density"],
               ["sld_corona",    "1e-6/Ang^2", 2.0,  [0.0, np.inf], "sld", "Corona scattering length density"],
-              ["radius_core",   "Ang",       40.0,  [0.0, np.inf], "", "Radius of core ( must be >> rg )"],
-              ["rg",    "Ang",       10.0,  [0.0, np.inf], "", "Radius of gyration of chains in corona"],
+              ["radius_core",   "Ang",       40.0,  [0.0, np.inf], "volume", "Radius of core ( must be >> rg )"],
+              ["rg",    "Ang",       10.0,  [0.0, np.inf], "volume", "Radius of gyration of chains in corona"],
               ["d_penetration", "",           1.0,  [-np.inf, np.inf], "", "Factor to mimic non-penetration of Gaussian chains"],
               ["n_aggreg",      "",           67.0,  [-np.inf, np.inf], "", "Aggregation number of the micelle"],            
              ]
