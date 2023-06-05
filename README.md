@@ -16,8 +16,8 @@ This repository contains python code to compute form factors of micellese descri
 ```
 
 There two ways you can use this code:
-1. Using the popular sasmodels : See the example in [sasmodels.ipynb]('./sasmodels.ipynb')
-2. Using seperate notebooks for each one of them : see the examples in [notebooks folder]('/notebooks')
+1. Using the popular sasmodels : See the example in [sasmodels.ipynb](/sasmodels.ipynb)
+2. Using seperate notebooks for each one of them : see the examples in [notebooks folder](/notebooks)
 
 ### Known issues:
 1. For some reason, the code to compute cylindrical core micelle behaves unexpectedly when using sasmodels
