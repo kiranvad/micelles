@@ -16,12 +16,12 @@ This repository contains python code to compute form factors of micellese descri
 ```
 
 There two ways you can use this code:
-1. Using the popular sasmodels : See the example in [sasmodels.ipynb](/sasmodels.ipynb)
+1. Using the popular `sasmodels` : See the example in [sasmodels.ipynb](/sasmodels.ipynb)
 2. Using seperate notebooks for each one of them : see the examples in [notebooks folder](/notebooks)
+
+If you are interested in fitting these models using the `bumps` interface of `sasmodels`, see the example in [optimize.py](/optimize.py)
 
 ### Known issues:
 1. Form factors of worm-like and vesicle-shaped micelles doesn't work as expected.
-2. Polydispertisty parameters are not being properly processed when using sasmodels.
 
 ### To-Do : 
-1. Implement example of optimization using bumps or other similar software

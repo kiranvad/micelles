@@ -133,3 +133,4 @@ data/*
 *.png
 SOURCE/
 test/*
+ext/*
