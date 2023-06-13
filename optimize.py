@@ -23,12 +23,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sasmodels.core import load_model
 from sasmodels.direct_model import call_kernel
-from bumps.names import *
 from sasmodels.bumps_model import Model, Experiment
 from sasmodels.data import Data1D 
+from bumps.names import *
+from bumps.fitters import fit
 
 # Spherical micelle in sasmodels to create a sample data
-model = load_model("../models/spherical_micelle.py")
+model = load_model("./models/spherical_micelle.py")
 q = np.logspace(-2, 0, 200)
 kernel = model.make_kernel([q])
 sphere_params = {'v_core' : 4000.0,
@@ -52,8 +53,9 @@ resolution = 0.005
 dIq = resolution*Iq
 dq = resolution*q
 data = Data1D(q, Iq, dx=dq, dy=dIq)
-model = Model(model)
+model = Model(model=model, background=0.0)
 model.radius_core.range(2.0,100.0)
 cutoff = 1e-3  # low precision cutoff
 M = Experiment(data=data, model=model, cutoff=cutoff)
 problem = FitProblem(M)
+result=fit(problem, method='dream',samples=1e2, init = 'cov',  verbose = True)

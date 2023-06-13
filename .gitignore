@@ -134,3 +134,4 @@ data/*
 SOURCE/
 test/*
 ext/*
+subtracted_incoherent/
