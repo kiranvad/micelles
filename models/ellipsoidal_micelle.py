@@ -51,8 +51,8 @@ parameters = [["v_core",    "Ang^3",  4000.0, [0.0, np.inf], "", "Volume of the 
               ["radius_core",   "Ang",       40.0,  [0.0, np.inf], "volume", "Radius of core ( must be >> rg )"],
               ["rg",    "Ang",       10.0,  [0.0, np.inf], "volume", "Radius of gyration of chains in corona"],
               ["eps",    "Ang",       2.0,  [1.0, np.inf], "", "Assymtic axis radius"],
-              ["d_penetration", "",           1.0,  [-np.inf, np.inf], "", "Factor to mimic non-penetration of Gaussian chains"],
-              ["n_aggreg",      "",           67.0,  [-np.inf, np.inf], "", "Aggregation number of the micelle"],            
+              ["d_penetration", "",           1.0,  [0.0, np.inf], "", "Factor to mimic non-penetration of Gaussian chains"],
+              ["n_aggreg",      "",           67.0,  [0.0, np.inf], "", "Aggregation number of the micelle"],            
              ]
 
 def Iq(q,
