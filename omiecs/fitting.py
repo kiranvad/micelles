@@ -9,8 +9,9 @@ from sasmodels.bumps_model import Model, Experiment
 
 from bumps.names import FitProblem
 from bumps.fitters import fit
+from bumps.mapper import MPIMapper
 
-import argparse, glob, os, shutil, pdb
+import argparse, glob, os, shutil, pdb, time, datetime
 
 def load_data_from_file(fname):
     SI = pd.read_csv('./sample_info_OMIECS.csv')
@@ -63,6 +64,7 @@ def setup_model(model):
     return sas_model, bumps_model
 
 def fit_file_model(fname, model, savename):
+    start = time.time()
     data, metadata = load_data_from_file(fname)
     print('Fitting the following sample : \n', metadata)
     sas_model, bumps_model = setup_model(model)
@@ -70,7 +72,8 @@ def fit_file_model(fname, model, savename):
     cutoff = 1e-3  # low precision cutoff
     expt = Experiment(data=data, model=bumps_model, cutoff=cutoff)
     problem = FitProblem(expt)
-    result = fit(problem, method='dream', 
+    mapper = MPIMapper.start_mapper(problem, None, cpus=0)
+    result = fit(problem, method='dream', mapper=mapper, 
                 samples=1e2, init = 'cov',  verbose = True
                 )
     
@@ -87,6 +90,10 @@ def fit_file_model(fname, model, savename):
     ax.legend()
     plt.savefig(savename)
     plt.close()
+
+    end = time.time()
+    time_str =  str(datetime.timedelta(seconds=end-start)) 
+    print('Total fitting time : %s'%(time_str))
 
     return
 

@@ -21,6 +21,12 @@ There two ways you can use this code:
 
 If you are interested in fitting these models using the `bumps` interface of `sasmodels`, see the example in [optimize.py](/optimize.py)
 
+### Following packages are needed for installation
+```bash
+pip install sasmodels sasdata
+pip install pandas matplotlib openpyxl bumps
+```
+
 ### Known issues:
 1. Form factors of worm-like and vesicle-shaped micelles doesn't work as expected.
 
