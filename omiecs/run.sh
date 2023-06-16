@@ -4,7 +4,7 @@
 #SBATCH --account=cheme
 #SBATCH --partition=compute
 #SBATCH --nodes=1
-#SBATCH --time=24:00:00
+#SBATCH --time=01:00:00
 #SBATCH --mem=64G
 #SBATCH --output=./pred.out
 #SBATCH --error=./err.out
@@ -20,7 +20,8 @@ echo "SLURM_NNODES"=$SLURM_NNODES
 echo "SLURMTMPDIR="$SLURMTMPDIR
 echo "working directory = "$SLURM_SUBMIT_DIR
 cd $SLURM_SUBMIT_DIR
-
+# module load gcc
+# export MX_RCACHE=0
 eval "$(conda shell.bash hook)"
 conda activate micelles
 echo "python from the following environment"
@@ -30,8 +31,8 @@ pwd
 ulimit -s unlimited
 
 echo "Launch Python job"
-python3 -u ./fitting.py  sph > ./logging_sph.out
-python3 -u ./fitting.py  cyl > ./logging_cyl.out
-python3 -u ./fitting.py  elp > ./logging_elp.out
+python -u ./fitting.py  sph > ./logging_sph.out
+# python3 -u ./fitting.py  cyl > ./logging_cyl.out
+# python3 -u ./fitting.py  elp > ./logging_elp.out
 echo "All Done!"
 exit

@@ -10,12 +10,22 @@ from sasmodels.bumps_model import Model, Experiment
 from bumps.names import FitProblem
 from bumps.fitters import fit
 from bumps.mapper import MPIMapper
+import multiprocessing as mp 
 
 import argparse, glob, os, shutil, pdb, time, datetime
 
+# Following are most likely spherical micelles with a PHFBA core and PDEGEEA corona
+MONO_ASSEM = [123,114,116,125,118,122,127,129,132,134,135,136,138,139,140,148,
+150,902,906,931,932,933,934,935,960,961,962,963,964,965,966,968,969,970,971]
+
+SLD_CORE = 1.85
+SLD_CORONA = 0.817
+SLD_SOLVENT = {'dTHF': 6.349, 'THF': 0.183, 'D2O':6.36, 
+'H2O':-0.561, 'dCF': 3.156, 'dTol':5.664, 'dAcetone':5.389}
+
 def load_data_from_file(fname):
     SI = pd.read_csv('./sample_info_OMIECS.csv')
-    flag = SI["Filename"]==fname.split('/')[-1]
+    flag = SI["Filename"]==fname.split('.')[0]
     metadata = SI[flag]
     trim = [metadata['lowq_trim'], metadata['Highq_trim']]
 
@@ -51,8 +61,6 @@ def setup_model(model):
     bumps_model.radius_core.range(20.0,60.0)
     bumps_model.radius_core_pd.range(0.0, 0.3)
     bumps_model.scale.range(0.0, 1000.0)
-    bumps_model.sld_core.range(0.0, 5.0)
-    bumps_model.sld_corona.range(0.0, 5.0)
     # use default bounds
     bumps_model.v_core.fixed = False 
     bumps_model.v_corona.fixed = False
@@ -60,6 +68,12 @@ def setup_model(model):
     # use fixed values
     bumps_model.background.fixed = True 
     bumps_model.background.value = 0.0
+    bumps_model.sld_core.fixed = True 
+    bumps_model.sld_core.value = SLD_CORE
+    bumps_model.sld_corona.fixed = True 
+    bumps_model.sld_corona.value = SLD_CORONA
+    bumps_model.sld_solvent.fixed = True 
+    bumps_model.sld_solvent.value = 1.0
 
     return sas_model, bumps_model
 
@@ -73,10 +87,11 @@ def fit_file_model(fname, model, savename):
     expt = Experiment(data=data, model=bumps_model, cutoff=cutoff)
     problem = FitProblem(expt)
     mapper = MPIMapper.start_mapper(problem, None, cpus=0)
-    result = fit(problem, method='dream', mapper=mapper, 
-                samples=1e2, init = 'cov',  verbose = True
+    result = fit(problem, method='dream', verbose=True, mapper=mapper, 
+                samples=1e2, init = 'cov', steps=0
                 )
     
+    print('Final fitting parameters for : ', fname)
     print('Parameter Name\tFitted value')
     for key, param in bumps_model.parameters().items():
         if not param.fixed:
@@ -102,17 +117,20 @@ if __name__=="__main__":
     parser.add_argument('model', metavar='m', type=str,
                         help='Specify the analytical model to be used')
     args = parser.parse_args()
-    filelist = glob.glob("./subtracted_incoherent/*.sub")
+    # filelist = glob.glob("./subtracted_incoherent/*.sub")
     model = args.model
-    SAVE_DIR = './fillting_%s/'%model
+    SAVE_DIR = './results_%s/'%model
     if os.path.exists(SAVE_DIR):
         shutil.rmtree(SAVE_DIR)
     os.makedirs(SAVE_DIR)
     print('Saving the results to %s'%SAVE_DIR)
 
-    for file in filelist:
-        savename = SAVE_DIR+'%s.png'%(file.split('/')[-1].split('.')[0])
-        fit_file_model(file, model, savename)
+    SI = pd.read_csv('./sample_info_OMIECS.csv')
+    for key, values in SI.iterrows():
+        if values['Sample'] in MONO_ASSEM:
+            fname = values['Filename']
+        savename = SAVE_DIR+'%s.png'%(fname.split('.')[0])
+        fit_file_model(fname, model, savename)
         break
 
 
