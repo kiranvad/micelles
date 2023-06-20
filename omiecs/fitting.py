@@ -10,7 +10,7 @@ from sasmodels.bumps_model import Model, Experiment
 from bumps.names import FitProblem
 from bumps.fitters import fit
 from bumps.mapper import MPIMapper
-import multiprocessing as mp 
+from bumps.fitters import * 
 
 import argparse, glob, os, shutil, pdb, time, datetime
 
@@ -20,18 +20,19 @@ MONO_ASSEM = [123,114,116,125,118,122,127,129,132,134,135,136,138,139,140,148,
 
 SLD_CORE = 1.85
 SLD_CORONA = 0.817
-SLD_SOLVENT = {'dTHF': 6.349, 'THF': 0.183, 'D2O':6.36, 
-'H2O':-0.561, 'dCF': 3.156, 'dTol':5.664, 'dAcetone':5.389}
+SLD_SOLVENT_LIST = {'dTHF': 6.349, 'THF': 0.183, 'D2O':6.36, 
+'H2O':-0.561, 'dCF': 3.156, 'dTol':5.664, 'dAcetone':5.389,
+'dTHF0':6.360, 'dTHF25':6.357, 'dTHF50':6.355, 'dTHF75':6.352,'hTHF':1.0
+}
 
 def load_data_from_file(fname):
     SI = pd.read_csv('./sample_info_OMIECS.csv')
-    flag = SI["Filename"]==fname.split('.')[0]
+    flag = SI["Filename"]==fname
     metadata = SI[flag]
     trim = [metadata['lowq_trim'], metadata['Highq_trim']]
-
     with suppress(NoKnownLoaderException):
         loader = Loader()
-        data = loader.load(fname)[0]
+        data = loader.load(os.getcwd()+'/subtracted_incoherent/%s'%fname)[0]
 
     data.qmin = data.x[trim[0]]
     data.qmax = data.x[trim[1]]
@@ -64,7 +65,7 @@ def setup_model(model):
     # use default bounds
     bumps_model.v_core.fixed = False 
     bumps_model.v_corona.fixed = False
-    bumps_model.n_aggreg.fixed = False
+    bumps_model.n_aggreg.fixed = True
     # use fixed values
     bumps_model.background.fixed = True 
     bumps_model.background.value = 0.0
@@ -73,7 +74,6 @@ def setup_model(model):
     bumps_model.sld_corona.fixed = True 
     bumps_model.sld_corona.value = SLD_CORONA
     bumps_model.sld_solvent.fixed = True 
-    bumps_model.sld_solvent.value = 1.0
 
     return sas_model, bumps_model
 
@@ -81,28 +81,45 @@ def fit_file_model(fname, model, savename):
     start = time.time()
     data, metadata = load_data_from_file(fname)
     print('Fitting the following sample : \n', metadata)
+    SLD_SOLVENT = SLD_SOLVENT_LIST[metadata.Solvent.values[0]]
     sas_model, bumps_model = setup_model(model)
+    bumps_model.sld_solvent.value = SLD_SOLVENT
     print('Using the following model for fitting : \n', sas_model.info.name)
     cutoff = 1e-3  # low precision cutoff
     expt = Experiment(data=data, model=bumps_model, cutoff=cutoff)
     problem = FitProblem(expt)
-    mapper = MPIMapper.start_mapper(problem, None, cpus=0)
-    result = fit(problem, method='dream', verbose=True, mapper=mapper, 
-                samples=1e2, init = 'cov', steps=0
-                )
-    
+    # mapper = MPIMapper.start_mapper(problem, None, cpus=0)
+    driver = FitDriver(fitclass=DreamFit, problem=problem, mapper=None, samples=1e2)
+    driver.clip() # make sure fit starts within domain
+    x0 = problem.getp()
+    x, fx = driver.fit()
+    problem.setp(x)
+    dx = driver.stderr()
+    print("final chisq", problem.chisq_str())
+    driver.show_err() 
     print('Final fitting parameters for : ', fname)
     print('Parameter Name\tFitted value')
     for key, param in bumps_model.parameters().items():
         if not param.fixed:
             print(key, '\t', param.value)
 
-    fig, ax = plt.subplots()
-    ax.loglog(data.x, data.y, color='k', label='True')
-    ax.loglog(data.x, problem.fitness.theory(), color='k', ls='--', label='predicted')
-    ax.set_xlabel('q')
-    ax.set_ylabel('I(q)')
-    ax.legend()
+    fig, axs = plt.subplots(1,2, figsize=(4*2, 4))
+
+    # plot predicted and data curve
+    axs[0].plot(data.x, problem.fitness.theory(), label='predicted', color='tab:orange')
+    axs[0].scatter(data.x, data.y, label='True',s=10, color='tab:blue')
+    axs[0].set_xlabel('q')
+    axs[0].set_ylabel('I(q)')
+    axs[0].legend()
+    axs[0].set_xscale('log')
+    axs[0].set_yscale('log')
+
+    # plot residuals
+    residuals = problem.fitness.residuals()
+    axs[1].scatter(data.x, residuals)
+    axs[1].set_title('Chisq : %.2f'%problem.chisq())
+    axs[0].set_xlabel('q')
+    axs[0].set_ylabel('residuals')
     plt.savefig(savename)
     plt.close()
 
@@ -131,7 +148,6 @@ if __name__=="__main__":
             fname = values['Filename']
         savename = SAVE_DIR+'%s.png'%(fname.split('.')[0])
         fit_file_model(fname, model, savename)
-        break
 
 
     

@@ -4,7 +4,7 @@
 #SBATCH --account=cheme
 #SBATCH --partition=compute
 #SBATCH --nodes=1
-#SBATCH --time=01:00:00
+#SBATCH --time=72:00:00
 #SBATCH --mem=64G
 #SBATCH --output=./pred.out
 #SBATCH --error=./err.out
