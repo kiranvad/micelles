@@ -17,7 +17,7 @@ import argparse, glob, os, shutil, pdb, time, datetime
 # Following are most likely spherical micelles with a PHFBA core and PDEGEEA corona
 MONO_ASSEM = [123,114,116,125,118,122,127,129,132,134,135,136,138,139,140,148,
 150,902,906,931,932,933,934,935,960,961,962,963,964,965,966,968,969,970,971]
-
+TESTING = True 
 SLD_CORE = 1.85
 SLD_CORONA = 0.817
 SLD_SOLVENT_LIST = {'dTHF': 6.349, 'THF': 0.183, 'D2O':6.36, 
@@ -29,18 +29,17 @@ def load_data_from_file(fname):
     SI = pd.read_csv('./sample_info_OMIECS.csv')
     flag = SI["Filename"]==fname
     metadata = SI[flag]
-    trim = [metadata['lowq_trim'], metadata['Highq_trim']]
     with suppress(NoKnownLoaderException):
         loader = Loader()
         data = loader.load(os.getcwd()+'/subtracted_incoherent/%s'%fname)[0]
 
-    data.qmin = data.x[trim[0]]
-    data.qmax = data.x[trim[1]]
-    min_max_mask = np.logical_and(data.x >= data.qmin, data.x <= data.qmax)
-    data.x = data.x[min_max_mask]
-    data.y = data.y[min_max_mask]
-    data.dx = data.dx[min_max_mask]
-    data.dy = data.dy[min_max_mask]
+    data.qmin = data.x[metadata['lowq_trim']]
+    data.qmax = data.x[metadata['Highq_trim']]
+    # min_max_mask = np.logical_and(data.x >= data.qmin, data.x <= data.qmax)
+    # data.x = data.x[min_max_mask]
+    # data.y = data.y[min_max_mask]
+    # data.dx = data.dx[min_max_mask]
+    # data.dy = data.dy[min_max_mask]
 
     return data, metadata
 
@@ -59,8 +58,8 @@ def setup_model(model):
         bumps_model = Model(model=sas_model)
         bumps_model.eps.range(1.0,20.0)
 
-    bumps_model.radius_core.range(20.0,60.0)
-    bumps_model.radius_core_pd.range(0.0, 0.3)
+    bumps_model.radius_core.range(20.0, 200.0)
+    bumps_model.radius_core_pd.range(0.0, 0.5)
     bumps_model.scale.range(0.0, 1000.0)
     # use default bounds
     bumps_model.v_core.fixed = False 
@@ -88,8 +87,8 @@ def fit_file_model(fname, model, savename):
     cutoff = 1e-3  # low precision cutoff
     expt = Experiment(data=data, model=bumps_model, cutoff=cutoff)
     problem = FitProblem(expt)
-    # mapper = MPIMapper.start_mapper(problem, None, cpus=0)
-    driver = FitDriver(fitclass=DreamFit, problem=problem, mapper=None, samples=1e2)
+    mapper = MPIMapper.start_mapper(problem, None, cpus=0)
+    driver = FitDriver(fitclass=DEFit, problem=problem, mapper=mapper, steps=5)
     driver.clip() # make sure fit starts within domain
     x0 = problem.getp()
     x, fx = driver.fit()
@@ -104,10 +103,11 @@ def fit_file_model(fname, model, savename):
             print(key, '\t', param.value)
 
     fig, axs = plt.subplots(1,2, figsize=(4*2, 4))
-
+    fig.subplots_adjust(wspace=0.5)
     # plot predicted and data curve
-    axs[0].plot(data.x, problem.fitness.theory(), label='predicted', color='tab:orange')
-    axs[0].scatter(data.x, data.y, label='True',s=10, color='tab:blue')
+    min_max_mask = (data.x >= data.qmin) & (data.x <= data.qmax)
+    axs[0].plot(data.x[min_max_mask], problem.fitness.theory(), label='predicted', color='tab:orange')
+    axs[0].errorbar(data.x, data.y, yerr=data.dy, fmt='o', ms =5, label='True', color='tab:blue')
     axs[0].set_xlabel('q')
     axs[0].set_ylabel('I(q)')
     axs[0].legend()
@@ -118,9 +118,11 @@ def fit_file_model(fname, model, savename):
     residuals = problem.fitness.residuals()
     axs[1].scatter(data.x, residuals)
     axs[1].set_title('Chisq : %.2f'%problem.chisq())
-    axs[0].set_xlabel('q')
-    axs[0].set_ylabel('residuals')
+    axs[1].set_xlabel('q')
+    axs[1].set_ylabel('residuals')
+    axs[1].set_xscale('log')
     plt.savefig(savename)
+    fig.tight_layout()
     plt.close()
 
     end = time.time()
@@ -136,7 +138,10 @@ if __name__=="__main__":
     args = parser.parse_args()
     # filelist = glob.glob("./subtracted_incoherent/*.sub")
     model = args.model
-    SAVE_DIR = './results_%s/'%model
+    if not TESTING:
+        SAVE_DIR = './results_%s/'%model
+    else:
+        SAVE_DIR = './test/'
     if os.path.exists(SAVE_DIR):
         shutil.rmtree(SAVE_DIR)
     os.makedirs(SAVE_DIR)
@@ -146,8 +151,11 @@ if __name__=="__main__":
     for key, values in SI.iterrows():
         if values['Sample'] in MONO_ASSEM:
             fname = values['Filename']
+        fname = 'P50F50_10_dTHF50.sub'
         savename = SAVE_DIR+'%s.png'%(fname.split('.')[0])
         fit_file_model(fname, model, savename)
+        if TESTING:
+            break
 
 
     
