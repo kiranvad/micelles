@@ -15,9 +15,8 @@ from bumps.fitters import *
 import argparse, glob, os, shutil, pdb, time, datetime
 
 # Following are most likely spherical micelles with a PHFBA core and PDEGEEA corona
-MONO_ASSEM = [123,114,116,125,118,122,127,129,132,134,135,136,138,139,140,148,
-150,902,906,931,932,933,934,935,960,961,962,963,964,965,966,968,969,970,971]
-TESTING = True 
+FIT_KEYS = [116,118,129,125,127,132,134,135,136,138,139,140,931,932,933,964,965,970,971]
+TESTING = False 
 SLD_CORE = 1.85
 SLD_CORONA = 0.817
 SLD_SOLVENT_LIST = {'dTHF': 6.349, 'THF': 0.183, 'D2O':6.36, 
@@ -25,22 +24,21 @@ SLD_SOLVENT_LIST = {'dTHF': 6.349, 'THF': 0.183, 'D2O':6.36,
 'dTHF0':6.360, 'dTHF25':6.357, 'dTHF50':6.355, 'dTHF75':6.352,'hTHF':1.0
 }
 
-def load_data_from_file(fname):
+def load_data_from_file(fname, use_trim=False):
     SI = pd.read_csv('./sample_info_OMIECS.csv')
     flag = SI["Filename"]==fname
     metadata = SI[flag]
     with suppress(NoKnownLoaderException):
         loader = Loader()
         data = loader.load(os.getcwd()+'/subtracted_incoherent/%s'%fname)[0]
-
-    data.qmin = data.x[metadata['lowq_trim']]
-    data.qmax = data.x[metadata['Highq_trim']]
-    # min_max_mask = np.logical_and(data.x >= data.qmin, data.x <= data.qmax)
-    # data.x = data.x[min_max_mask]
-    # data.y = data.y[min_max_mask]
-    # data.dx = data.dx[min_max_mask]
-    # data.dy = data.dy[min_max_mask]
-
+    
+    if not use_trim:
+        data.qmin = min(data.x)
+        data.qmax = max(data.x)
+    else:
+        data.qmin = data.x[metadata['lowq_trim']]
+        data.qmax = data.x[metadata['Highq_trim']]
+        
     return data, metadata
 
 def setup_model(model):
@@ -78,7 +76,7 @@ def setup_model(model):
 
 def fit_file_model(fname, model, savename):
     start = time.time()
-    data, metadata = load_data_from_file(fname)
+    data, metadata = load_data_from_file(fname, use_trim=True)
     print('Fitting the following sample : \n', metadata)
     SLD_SOLVENT = SLD_SOLVENT_LIST[metadata.Solvent.values[0]]
     sas_model, bumps_model = setup_model(model)
@@ -87,8 +85,8 @@ def fit_file_model(fname, model, savename):
     cutoff = 1e-3  # low precision cutoff
     expt = Experiment(data=data, model=bumps_model, cutoff=cutoff)
     problem = FitProblem(expt)
-    mapper = MPIMapper.start_mapper(problem, None, cpus=0)
-    driver = FitDriver(fitclass=DEFit, problem=problem, mapper=mapper, steps=5)
+    # mapper = MPIMapper.start_mapper(problem, None, cpus=0)
+    driver = FitDriver(fitclass=DEFit, problem=problem, mapper=None, steps=5e2)
     driver.clip() # make sure fit starts within domain
     x0 = problem.getp()
     x, fx = driver.fit()
@@ -100,14 +98,22 @@ def fit_file_model(fname, model, savename):
     print('Parameter Name\tFitted value')
     for key, param in bumps_model.parameters().items():
         if not param.fixed:
-            print(key, '\t', param.value)
+            print(key, '\t', '%.2e'%param.value)
 
     fig, axs = plt.subplots(1,2, figsize=(4*2, 4))
-    fig.subplots_adjust(wspace=0.5)
+    fig.subplots_adjust(wspace=0.3)
+    axs[0].errorbar(data.x, data.y, yerr=data.dy, fmt='o', 
+    ms=4, label='True', markerfacecolor='none', markeredgecolor='tab:blue')
     # plot predicted and data curve
     min_max_mask = (data.x >= data.qmin) & (data.x <= data.qmax)
-    axs[0].plot(data.x[min_max_mask], problem.fitness.theory(), label='predicted', color='tab:orange')
-    axs[0].errorbar(data.x, data.y, yerr=data.dy, fmt='o', ms =5, label='True', color='tab:blue')
+    q_mask = data.x[min_max_mask]
+    axs[0].axvline(x=data.qmin, color='k')
+    axs[0].axvline(x=data.qmax, color='k')   
+    # masking from sasmodels : sasmodels/direct_model.py#L270
+    axs[0].plot(q_mask, problem.fitness.theory(), label='predicted', color='tab:orange')
+    # the fitness computes the kernel on set of data.x computed using resolution
+    # see sasmodels/direct_model.py#L259
+    # more precisely it is set using resolution.Pinhole1D see /sasmodels/direct_model.py#L268
     axs[0].set_xlabel('q')
     axs[0].set_ylabel('I(q)')
     axs[0].legend()
@@ -116,13 +122,13 @@ def fit_file_model(fname, model, savename):
 
     # plot residuals
     residuals = problem.fitness.residuals()
-    axs[1].scatter(data.x, residuals)
-    axs[1].set_title('Chisq : %.2f'%problem.chisq())
+    axs[1].scatter(q_mask, residuals)
+    axs[1].set_title('Chisq : %.2e'%problem.chisq())
     axs[1].set_xlabel('q')
     axs[1].set_ylabel('residuals')
     axs[1].set_xscale('log')
+    plt.tight_layout()
     plt.savefig(savename)
-    fig.tight_layout()
     plt.close()
 
     end = time.time()
@@ -149,13 +155,14 @@ if __name__=="__main__":
 
     SI = pd.read_csv('./sample_info_OMIECS.csv')
     for key, values in SI.iterrows():
-        if values['Sample'] in MONO_ASSEM:
+        if values['Sample'] in FIT_KEYS:
             fname = values['Filename']
-        fname = 'P50F50_10_dTHF50.sub'
-        savename = SAVE_DIR+'%s.png'%(fname.split('.')[0])
-        fit_file_model(fname, model, savename)
-        if TESTING:
-            break
+            if TESTING:
+                fname = 'P50F50_10_dTHF50.sub'
+            savename = SAVE_DIR+'%s.png'%(fname.split('.')[0])
+            fit_file_model(fname, model, savename)
+            if TESTING:
+                break
 
 
     
