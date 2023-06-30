@@ -37,7 +37,7 @@ def load_data_from_file(fname, use_trim=False):
         data.qmax = max(data.x)
     else:
         data.qmin = data.x[metadata['lowq_trim']]
-        data.qmax = data.x[metadata['Highq_trim']]
+        data.qmax = data.x[-metadata['Highq_trim']]
         
     return data, metadata
 
@@ -58,7 +58,9 @@ def setup_model(model):
 
     bumps_model.radius_core.range(20.0, 200.0)
     bumps_model.radius_core_pd.range(0.0, 0.5)
-    bumps_model.scale.range(0.0, 1000.0)
+    bumps_model.rg.range(0.0, 200.0)
+    bumps_model.d_penetration.range(0.75, 1.0)    
+    bumps_model.scale.range(1e-15, 1e-5)
     # use default bounds
     bumps_model.v_core.fixed = False 
     bumps_model.v_corona.fixed = False
@@ -102,8 +104,9 @@ def fit_file_model(fname, model, savename):
 
     fig, axs = plt.subplots(1,2, figsize=(4*2, 4))
     fig.subplots_adjust(wspace=0.3)
-    axs[0].errorbar(data.x, data.y, yerr=data.dy, fmt='o', 
-    ms=4, label='True', markerfacecolor='none', markeredgecolor='tab:blue')
+    # axs[0].errorbar(data.x, data.y, yerr=data.dy, fmt='o', 
+    # ms=4, label='True', markerfacecolor='none', markeredgecolor='tab:blue')
+    axs[0].scatter(data.x, data.y, label='True')
     # plot predicted and data curve
     min_max_mask = (data.x >= data.qmin) & (data.x <= data.qmax)
     q_mask = data.x[min_max_mask]
@@ -154,13 +157,16 @@ if __name__=="__main__":
     print('Saving the results to %s'%SAVE_DIR)
 
     SI = pd.read_csv('./sample_info_OMIECS.csv')
+    counter = 0
     for key, values in SI.iterrows():
         if values['Sample'] in FIT_KEYS:
+            print('Fitting %d/%d'%(counter+1, len(FIT_KEYS)))
             fname = values['Filename']
             if TESTING:
                 fname = 'P50F50_10_dTHF50.sub'
             savename = SAVE_DIR+'%s.png'%(fname.split('.')[0])
             fit_file_model(fname, model, savename)
+            counter += 1
             if TESTING:
                 break
 
