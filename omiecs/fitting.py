@@ -104,6 +104,7 @@ if __name__=="__main__":
     print('Saving the results to %s'%SAVE_DIR)
 
     for file in filelist:
+        file = 'P50F50_10_dTHF50.sub'
         savename = SAVE_DIR+'%s.png'%(file.split('/')[-1].split('.')[0])
         fit_file_model(file, model, savename)
         break
