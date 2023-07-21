@@ -16,13 +16,14 @@ import argparse, glob, os, shutil, pdb, time, datetime
 
 # Following are most likely spherical micelles with a PHFBA core and PDEGEEA corona
 FIT_KEYS = [116,118,129,125,127,132,134,135,136,138,139,140,931,932,933,964,965,970,971]
-TESTING = False 
+TESTING = True 
 SLD_CORE = 1.85
 SLD_CORONA = 0.817
 SLD_SOLVENT_LIST = {'dTHF': 6.349, 'THF': 0.183, 'D2O':6.36, 
 'H2O':-0.561, 'dCF': 3.156, 'dTol':5.664, 'dAcetone':5.389,
 'dTHF0':6.360, 'dTHF25':6.357, 'dTHF50':6.355, 'dTHF75':6.352,'hTHF':1.0
 }
+NUM_STEPS = 5 if TESTING else 5e2
 
 def load_data_from_file(fname, use_trim=False):
     SI = pd.read_csv('./sample_info_OMIECS.csv')
@@ -36,7 +37,7 @@ def load_data_from_file(fname, use_trim=False):
         data.qmin = min(data.x)
         data.qmax = max(data.x)
     else:
-        data.qmin = data.x[metadata['lowq_trim']]
+        data.qmin = min(data.x)
         data.qmax = data.x[-metadata['Highq_trim']]
         
     return data, metadata
@@ -88,7 +89,7 @@ def fit_file_model(fname, model, savename):
     expt = Experiment(data=data, model=bumps_model, cutoff=cutoff)
     problem = FitProblem(expt)
     # mapper = MPIMapper.start_mapper(problem, None, cpus=0)
-    driver = FitDriver(fitclass=DEFit, problem=problem, mapper=None, steps=5e2)
+    driver = FitDriver(fitclass=DEFit, problem=problem, mapper=None, steps=NUM_STEPS)
     driver.clip() # make sure fit starts within domain
     x0 = problem.getp()
     x, fx = driver.fit()
