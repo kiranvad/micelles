@@ -25,13 +25,16 @@ SLD_SOLVENT_LIST = {'dTHF': 6.349, 'THF': 0.183, 'D2O':6.36,
 }
 NUM_STEPS = 5 if TESTING else 5e2
 
+SI_FILE_LOC = './EXPTDATA_V2/sample_info_OMIECS.csv'
+DATA_DIR = './EXPTDATA_V2/inco_bg_sub/'
+
 def load_data_from_file(fname, use_trim=False):
-    SI = pd.read_csv('./sample_info_OMIECS.csv')
+    SI = pd.read_csv(SI_FILE_LOC)
     flag = SI["Filename"]==fname
     metadata = SI[flag]
     with suppress(NoKnownLoaderException):
         loader = Loader()
-        data = loader.load(os.getcwd()+'/subtracted_incoherent/%s'%fname)[0]
+        data = loader.load(DATA_DIR+'%s'%fname)[0]
     
     if not use_trim:
         data.qmin = min(data.x)
@@ -157,7 +160,7 @@ if __name__=="__main__":
     os.makedirs(SAVE_DIR)
     print('Saving the results to %s'%SAVE_DIR)
 
-    SI = pd.read_csv('./sample_info_OMIECS.csv')
+    SI = pd.read_csv(SI_FILE_LOC)
     counter = 0
     for key, values in SI.iterrows():
         if values['Sample'] in FIT_KEYS:
@@ -170,6 +173,3 @@ if __name__=="__main__":
             counter += 1
             if TESTING:
                 break
-
-
-    
