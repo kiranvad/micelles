@@ -6,6 +6,7 @@ import numpy as np
 from math import expm1
 from scipy.special import j0 as B0
 from scipy.special import j1 as B1
+import time, datetime
 
 def sas_2j1x_x(x):
     if np.isclose(x, 0.0):
@@ -85,7 +86,8 @@ def Iq(q,
        d_penetration=1,
        n_aggreg=67
        ):
-    
+    start = time.time()
+    n_aggreg = (np.pi * radius_core**2 * length_core)/v_core
     v_total = n_aggreg*(v_core+v_corona)
     rho_solv = sld_solvent     # sld of solvent [1/A^2]
     rho_core = sld_core        # sld of core [1/A^2]
@@ -123,6 +125,9 @@ def Iq(q,
     i_micelle = term1 + term2 + term3 + term4
 
     # Normalize intensity by total volume
+    end = time.time()
+    time_str =  str(datetime.timedelta(seconds=end-start))   
+    # print('Total running time: %s'%(time_str))
     return i_micelle/v_total
 
 Iq.vectorized = False  # Iq does not accept an array of q values

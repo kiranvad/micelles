@@ -1,13 +1,13 @@
 #!/bin/bash
 
-#SBATCH --job-name=micelles
+#SBATCH --job-name=cyl-micelles
 #SBATCH --account=cheme
 #SBATCH --partition=compute
 #SBATCH --nodes=1
 #SBATCH --time=72:00:00
 #SBATCH --mem=64G
-#SBATCH --output=./pred.out
-#SBATCH --error=./err.out
+#SBATCH --output=./slurm/cyl_pred.out
+#SBATCH --error=./slurm/cyl_err.out
 #SBATCH --mail-user=kiranvad@uw.edu
 #SBATCH --mail-type=END
 #SBATCH --export=all
@@ -31,8 +31,6 @@ pwd
 ulimit -s unlimited
 
 echo "Launch Python job"
-python -u ./fitting.py  sph > ./logging_sph.out
-# python3 -u ./fitting.py  cyl > ./logging_cyl.out
-# python3 -u ./fitting.py  elp > ./logging_elp.out
+python -u ./fitting.py  cyl > ./slurm/logging_cyl.out
 echo "All Done!"
 exit

@@ -12,10 +12,9 @@ from bumps.fitters import fit
 from bumps.mapper import MPIMapper
 from bumps.fitters import * 
 
-import argparse, glob, os, shutil, pdb, time, datetime
+import argparse, glob, os, shutil, pdb, time, datetime, json
 
 # Following are most likely spherical micelles with a PHFBA core and PDEGEEA corona
-FIT_KEYS = [116,118,129,125,127,132,134,135,136,138,139,140,931,932,933,964,965,970,971]
 TESTING = True 
 SLD_CORE = 1.85
 SLD_CORONA = 0.817
@@ -67,7 +66,7 @@ def setup_model(model):
     bumps_model.scale.range(1e-15, 1e-5)
     # use default bounds
     bumps_model.v_core.fixed = False 
-    bumps_model.v_corona.fixed = False
+    bumps_model.v_corona.fixed = True
     bumps_model.n_aggreg.fixed = True
     # use fixed values
     bumps_model.background.fixed = True 
@@ -142,15 +141,21 @@ def fit_file_model(fname, model, savename):
     time_str =  str(datetime.timedelta(seconds=end-start)) 
     print('Total fitting time : %s'%(time_str))
 
-    return
+    return data, metadata, bumps_model, driver
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser(description='Process parameters for fitting.')
     parser.add_argument('model', metavar='m', type=str,
-                        help='Specify the analytical model to be used')
+                        help='Specify the analytical model to be used') 
     args = parser.parse_args()
     # filelist = glob.glob("./subtracted_incoherent/*.sub")
     model = args.model
+    if model=='sph':
+        FIT_KEYS = [116,118,129,125,127,132,134,135,136,138,139,140,931,932,933,964,965,970,971]
+    elif model=='cyl':
+        FIT_KEYS = [129, 132, 118, 136]
+    elif model=='elp':
+        FIT_KEYS = [129]
     if not TESTING:
         SAVE_DIR = './results_%s/'%model
     else:
@@ -162,14 +167,23 @@ if __name__=="__main__":
 
     SI = pd.read_csv(SI_FILE_LOC)
     counter = 0
+    json_output = {}
     for key, values in SI.iterrows():
         if values['Sample'] in FIT_KEYS:
             print('Fitting %d/%d'%(counter+1, len(FIT_KEYS)))
             fname = values['Filename']
             if TESTING:
-                fname = 'P50F50_10_dTHF50.sub'
+                fname = 'P50F50_10dTHF50.sub'
             savename = SAVE_DIR+'%s.png'%(fname.split('.')[0])
-            fit_file_model(fname, model, savename)
+            data, metadata, bumps_model, driver = fit_file_model(fname, model, savename)
             counter += 1
+            fitted_params = {}
+            for key, param in bumps_model.parameters().items():
+                fitted_params[key] = param.value
+            json_output[fname] = fitted_params
+
             if TESTING:
                 break
+    
+    with open(SAVE_DIR+'output.json', 'w', encoding='utf-8') as f:
+        json.dump(json_output, f, ensure_ascii=False, indent=4)
