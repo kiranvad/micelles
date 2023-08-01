@@ -135,3 +135,4 @@ SOURCE/
 test/*
 ext/*
 subtracted_incoherent/
+*.DS_Store

@@ -86,6 +86,7 @@ def Iq(q,
        n_aggreg=67
        ):
     
+    n_aggreg = (np.pi * radius_core**2 * length_core)/v_core
     v_total = n_aggreg*(v_core+v_corona)
     rho_solv = sld_solvent     # sld of solvent [1/A^2]
     rho_core = sld_core        # sld of core [1/A^2]
@@ -136,7 +137,7 @@ def random():
     n_aggreg = np.random.randint(3, 30)
     # volume of head groups is the core volume over the number of groups,
     # with a correction for packing fraction of the head groups.
-    v_core = 4*np.pi/3*radius_core**3/n_aggreg * 0.68
+    v_core = (np.pi*radius_core**2 * length_core)/n_aggreg
     # Rg^2 for gaussian coil is a^2n/6 => a^2 = 6 Rg^2/n
     # a=2r => r = Rg sqrt(3/2n)
     # v = 4/3 pi r^3 n => v = 4/3 pi Rg^3 (3/2n)^(3/2) n = pi Rg^3 sqrt(6/n)
