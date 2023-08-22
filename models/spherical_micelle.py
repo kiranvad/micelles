@@ -3,7 +3,8 @@ Spherical core with Gaussian chain micelle model
 """
 
 import numpy as np
-from math import expm1
+from math import expm1 
+import pdb
 
 def sas_3j1x_x(q):
     SPH_J1C_CUTOFF = 0.01
@@ -49,7 +50,7 @@ def Iq(q,
         rg=10,
         d_penetration=1,
         n_aggreg=67):
-    
+    # print(v_core, v_corona, sld_solvent, sld_core, sld_corona,radius_core, rg, d_penetration, n_aggreg)
     n_aggreg = (4/3)*np.pi*(radius_core**3)/v_core
     v_total = n_aggreg*(v_core+v_corona)
     rho_solv = sld_solvent     # sld of solvent [1/A^2]
