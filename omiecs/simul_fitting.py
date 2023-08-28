@@ -12,14 +12,15 @@ from bumps.fitters import *
 
 import glob, os, shutil, pdb, time, datetime, json
 
-TESTING = True 
+TESTING = False 
 SLD_CORE = 1.85
 SLD_CORONA = 0.817
 SLD_SOLVENT_LIST = {'dTHF': 6.349, 'THF': 0.183, 'D2O':6.36, 
 'H2O':-0.561, 'dCF': 3.156, 'dTol':5.664, 'dAcetone':5.389,
 'dTHF0':6.360, 'dTHF25':6.357, 'dTHF50':6.355, 'dTHF75':6.352,'hTHF':1.0
 }
-NUM_STEPS = 5 if TESTING else 5e2
+NUM_STEPS = 5 if TESTING else 5e2 
+MODEL = 'cyl'
 
 SI_FILE_LOC = './EXPTDATA_V2/sample_info_OMIECS.csv'
 DATA_DIR = './EXPTDATA_V2/inco_bg_sub/'
@@ -50,18 +51,15 @@ def setup_model(model):
     elif model=='cyl':
         sas_model = load_model("../models/cylindrical_micelle.py")
         bumps_model = Model(model=sas_model)
-        bumps_model.length_core.range(20.0,1000.0)
 
     elif model=='elp':
         sas_model = load_model("../models/ellipsoidal_micelle.py")
         bumps_model = Model(model=sas_model)
         bumps_model.eps.range(1.0,20.0)
 
-    bumps_model.d_penetration.range(0.75, 1.0)    
-    bumps_model.scale.range(1e-15, 1e-5)
     # use default bounds
-    bumps_model.v_core.fixed = False 
-    bumps_model.v_corona.fixed = False
+    bumps_model.v_core.range(1e0, 1e8) 
+    bumps_model.v_corona.range(1e0, 1e8)
     bumps_model.n_aggreg.fixed = True
     # use fixed values
     bumps_model.background.fixed = True 
@@ -91,10 +89,16 @@ def fit_files_model(fnames, model, savedir):
                         radius_core = bumps_model.radius_core,
                         radius_core_pd = bumps_model.radius_core_pd,
                         rg = bumps_model.rg,
+                        d_penetration = bumps_model.d_penetration, 
+                        scale = bumps_model.scale,
+                        length_core = bumps_model.length_core
                         )
     free.radius_core.range(20.0, 200.0)
     free.radius_core_pd.range(0.0, 0.5)
     free.rg.range(0.0, 200.0)
+    free.d_penetration.range(0.75, 1.1)
+    free.scale.range(1e-15, 1e-5)
+    free.length_core.range(20.0,1000.0)
 
     print('Using the following model for fitting : \n', sas_model.info.name)
     expt = [Experiment(data=data, model=bumps_model, name='data_%d'%i) for i,data in enumerate(datasets)]
@@ -155,9 +159,9 @@ def fit_files_model(fnames, model, savedir):
 
 
 if __name__=="__main__":
+    JOB_START_TIME = time.time()
     FIT_KEYS = [116,118,129,125,127,132,134,135,136,138,139,140,931,932,933,964,965,970,971] 
     BLOCK_KEYS = [('DEG', '25b'), ('DEG', '50'), ('DEG', '75'), ('PEG', '25'), ('PEG', '50')]
-
     SI = pd.read_csv(SI_FILE_LOC)
     counter = 0
     json_output = {}
@@ -174,28 +178,43 @@ if __name__=="__main__":
         
         return SIMUL_FILENAMES
 
-    FIT_BLOCK_KEY = ('DEG', '25b') 
-    fit_name = "%s_%s"%(FIT_BLOCK_KEY[0], FIT_BLOCK_KEY[1])
-    SAVE_DIR = './results_simulfit/%s/'%fit_name
-    if os.path.exists(SAVE_DIR):
-        shutil.rmtree(SAVE_DIR)
-    os.makedirs(SAVE_DIR)
-    print('Saving the results to %s'%SAVE_DIR)
-    SIMUL_FILENAMES = get_simul_filenames(FIT_BLOCK_KEY)
-    datasets, metadatasets, problem, bumps_model, driver = fit_files_model(SIMUL_FILENAMES, 'sph', SAVE_DIR)
-    all_pars = problem.model_parameters()
-    model_pars = all_pars["models"][0]
-    free_pars = all_pars["freevars"]
-    for i, fname in enumerate(SIMUL_FILENAMES):
-        # extract fitted params of an fname
-        fitted_params = {}
-        file_pars = model_pars.copy()
-        for name, param in free_pars.items():
-            file_pars[name].set(param[i].value)
-        for name, param in file_pars.items():
-            fitted_params[name] = param.value
-        # add current fname params to json
-        json_output[fname] = fitted_params
-    
-    with open("./results_simulfit/output.json", 'w', encoding='utf-8') as f:
-        json.dump(json_output, f, ensure_ascii=False, indent=4)
+    for FIT_BLOCK_KEY in BLOCK_KEYS: 
+        fit_name = "%s_%s"%(FIT_BLOCK_KEY[0], FIT_BLOCK_KEY[1])
+        if not TESTING:
+            SAVE_DIR = './results_simulfit_cyl/%s/'%fit_name
+        else:
+            SAVE_DIR = './test/'
+
+        if os.path.exists(SAVE_DIR):
+            shutil.rmtree(SAVE_DIR)
+        os.makedirs(SAVE_DIR)
+        print('Saving the results to %s'%SAVE_DIR)
+        SIMUL_FILENAMES = get_simul_filenames(FIT_BLOCK_KEY)
+        datasets, metadatasets, problem, bumps_model, driver = fit_files_model(SIMUL_FILENAMES, MODEL, SAVE_DIR)
+        all_pars = problem.model_parameters()
+        model_pars = all_pars["models"][0]
+        free_pars = all_pars["freevars"]
+        for i, fname in enumerate(SIMUL_FILENAMES):
+            # extract fitted params of an fname
+            fitted_params = {}
+            file_pars = model_pars.copy()
+            for name, param in free_pars.items():
+                file_pars[name].set(param[i].value)
+            for name, param in file_pars.items():
+                fitted_params[name] = param.value
+            # add current fname params to json
+            json_output[fname] = fitted_params
+
+        if TESTING:
+            break
+
+    if not TESTING:
+        with open("./results_simulfit/output.json", 'w', encoding='utf-8') as f:
+            json.dump(json_output, f, ensure_ascii=False, indent=4)
+    else:
+        with open("./test/output.json", 'w', encoding='utf-8') as f:
+            json.dump(json_output, f, ensure_ascii=False, indent=4)
+
+    JOB_END_TIME = time.time()
+    time_str =  str(datetime.timedelta(seconds=JOB_END_TIME-JOB_START_TIME)) 
+    print('Total fitting time : %s'%(time_str))
