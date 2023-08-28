@@ -4,23 +4,7 @@ Spherical core with Gaussian chain micelle model
 
 import numpy as np
 from math import expm1 
-import pdb
-
-def sas_3j1x_x(q):
-    SPH_J1C_CUTOFF = 0.01
-    if (np.fabs(q) < SPH_J1C_CUTOFF):
-        q2 = q*q
-        return (1.0 + q2*(-3./30. + q2*(3./840. + q2*(-3./45360.))))
-    else:
-        sin_q = np.sin(q)
-        cos_q = np.cos(q)
-        return 3.0*(sin_q/q - cos_q)/(q*q)
-
-def sas_sinx_x(x):
-    if np.isclose(x, 0.0):
-        return 1.0
-    else:
-        return np.sin(x)/x
+from sasmodels.special import sas_3j1x_x, sas_sinx_x
 
 name = "spherical_micelle"
 title = "Spherical core with a Gaussian chain micelle"
@@ -66,12 +50,14 @@ def Iq(q,
 
     # Self-correlation term of the chains
     qrg2 = np.power(q*rg, 2)
-    debye_chain = 1.0 if qrg2==0.0 else 2.0*(expm1(-qrg2)+qrg2)/(qrg2*qrg2)
+    debye_chain = 2.0*(np.vectorize(expm1)(-qrg2)+qrg2)/(qrg2**2) 
+    debye_chain[qrg2==0.0] = 1.0
     term2 = n_aggreg * beta_corona * beta_corona * debye_chain
 
     # Interference cross-term between core and chains
     qrg = q*rg
-    chain_ampl =  1.0 if qrg==0.0 else -expm1(-qrg)/qrg
+    chain_ampl = -np.vectorize(expm1)(-qrg)/qrg
+    chain_ampl[qrg==0.0] =  1.0 
     bes_corona = sas_sinx_x(q*(radius_core + d_penetration * rg))
     term3 = 2.0 * n_aggreg * n_aggreg * beta_core * beta_corona * bes_core * chain_ampl * bes_corona
 
@@ -83,7 +69,7 @@ def Iq(q,
 
     return i_micelle/v_total
 
-Iq.vectorized = False  # Iq accepts an array of q values
+Iq.vectorized = True  # Iq accepts an array of q values
 
 def random():
     """Return a random parameter set for the model."""
