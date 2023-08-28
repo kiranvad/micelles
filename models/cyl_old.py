@@ -4,34 +4,54 @@ Cylindrical core with Gaussian chain micelle model
 
 import numpy as np
 from math import expm1
-from sasmodels.special import sas_2J1x_x, sas_sinx_x
-from scipy.special import j0 as sas_J0x  
-import pdb
+from scipy.special import j0 as B0
+from scipy.special import j1 as B1
 
-def orientational_average(f, alpha):
-    dt = np.asarray([np.sin(ai) for ai in alpha])
-    integrand = np.einsum('ij,j->ij', f, dt)
+def sas_2j1x_x(x):
+    if np.isclose(x, 0.0):
+        return 2.0
+    else:
+        return (2*B1(x))/x
 
-    return np.trapz(integrand, x = alpha, axis=1)
+def sas_sinx_x(x):
+    if np.isclose(x, 0.0):
+        return 1.0
+    else:
+        return np.sin(x)/x
+    
+def sas_j0x(x):
+    if np.isclose(x, 0.0):
+        return 1.0
+    else:
+        return B0(x)  
+    
+def orientational_average(f, num_alpha = 200):
+    """ Compute orientational average
+
+    f should be a function of alpha
+    """
+    alpha = np.linspace(0, np.pi, num=num_alpha)
+    integrand = [f(a)*np.sin(a) for a in alpha]
+
+    return np.trapz(integrand, x = alpha)
 
 def psi(q, R, L, a):
-    x = np.einsum('i,j->ij', q*R, np.sin(a))
-    y = 0.5*np.einsum('i,j->ij', q*L, np.cos(a))
+    x = q*R*np.sin(a)
+    y = 0.5*q*L*np.cos(a)
 
-    t1 = sas_2J1x_x(x)
+    t1 = sas_2j1x_x(x)
     t2 = sas_sinx_x(y)
 
     return t1*t2
 
 def sigma(q, R, L, a):
-    x = np.einsum('i,j->ij', q*R, np.sin(a))
-    y = 0.5*np.einsum('i,j->ij', q*L, np.cos(a))
+    x = q*R*np.sin(a)
+    y = 0.5*q*L*np.cos(a)
 
-    t1 = (R/(R+L))*(sas_2J1x_x(x))*np.cos(y)
-    t2 = (L/(R+L))*(sas_J0x(x))*(sas_sinx_x(y))
+    t1 = (R/(R+L))*(sas_2j1x_x(x))*np.cos(y)
+    t2 = (L/(R+L))*(sas_j0x(x))*(sas_sinx_x(y))
 
-    return t1+t2 
-
+    return t1+t2
 
 
 name = "cylindrical_micelle"
@@ -74,42 +94,39 @@ def Iq(q,
 
     beta_core = v_core * (rho_core - rho_solv)
     beta_corona = v_corona * (rho_corona - rho_solv)
-    alpha = np.linspace(0, np.pi, num=200)
 
     # Self-correlation term of the core
-    bes_core = psi(q, radius_core, length_core, alpha)
-    Fs = orientational_average(bes_core**2, alpha)
-    term1 = np.power(n_aggreg*beta_core, 2)*Fs 
+    bes_core = lambda a : psi(q, radius_core, length_core, a)
+    Fs = orientational_average(lambda a : bes_core(a)**2)
+    term1 = np.power(n_aggreg*beta_core, 2)*Fs
 
     # Self-correlation term of the chains
     qrg2 = np.power(q*rg, 2)
-    debye_chain = 2.0*(np.vectorize(expm1)(-qrg2)+qrg2)/(qrg2**2) 
-    debye_chain[qrg2==0.0] = 1.0
+    debye_chain = 1.0 if qrg2==0.0 else 2.0*(expm1(-qrg2)+qrg2)/(qrg2**2)
     term2 = n_aggreg * (beta_corona**2) * debye_chain
 
     # Interference cross-term between core and chains
     qrg = q*rg
-    chain_ampl = -np.vectorize(expm1)(-qrg)/qrg
-    chain_ampl[qrg==0.0] =  1.0 
-    bes_corona = sigma(q,
-                       radius_core+ d_penetration*rg,
-                       length_core+ 2*d_penetration*rg,
-                       alpha
-                       )
-    Ssc = chain_ampl*orientational_average(bes_core*bes_corona, alpha)
+    chain_ampl =  1.0 if qrg==0.0 else -expm1(-qrg)/qrg
+    bes_corona = lambda a : sigma(q, 
+                                  radius_core+ d_penetration*rg, 
+                                  length_core+ 2*d_penetration*rg,
+                                  a
+                                  )
+    Ssc = chain_ampl*orientational_average(lambda a : bes_core(a)*bes_corona(a))
     term3 = 2.0 * (n_aggreg**2) * beta_core * beta_corona * Ssc
 
     # Interference cross-term between chains
-    Scc = (chain_ampl**2)*orientational_average(bes_corona**2, alpha)
+    Scc = (chain_ampl**2)*orientational_average(lambda a : bes_corona(a)**2)
     term4 = n_aggreg * (n_aggreg - 1.0)* (beta_corona**2)*Scc
 
     # I(q)_micelle : Sum of 4 terms computed above
-    i_micelle = term1 + term2 + term3 + term4 
+    i_micelle = term1 + term2 + term3 + term4
 
     # Normalize intensity by total volume
     return i_micelle/v_total
 
-Iq.vectorized = True  # Iq does not accept an array of q values
+Iq.vectorized = False  # Iq does not accept an array of q values
 
 def random():
     """Return a random parameter set for the model."""
