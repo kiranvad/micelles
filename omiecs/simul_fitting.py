@@ -181,7 +181,8 @@ if __name__=="__main__":
     for FIT_BLOCK_KEY in BLOCK_KEYS: 
         fit_name = "%s_%s"%(FIT_BLOCK_KEY[0], FIT_BLOCK_KEY[1])
         if not TESTING:
-            SAVE_DIR = './results_simulfit_cyl/%s/'%fit_name
+            BASE_SAVE_DIR = './results_simulfit_%s/'%MODEL
+            SAVE_DIR = BASE_SAVE_DIR+'%s/'%(MODEL, fit_name)
         else:
             SAVE_DIR = './test/'
 
@@ -209,7 +210,7 @@ if __name__=="__main__":
             break
 
     if not TESTING:
-        with open("./results_simulfit/output.json", 'w', encoding='utf-8') as f:
+        with open(BASE_SAVE_DIR+"output.json", 'w', encoding='utf-8') as f:
             json.dump(json_output, f, ensure_ascii=False, indent=4)
     else:
         with open("./test/output.json", 'w', encoding='utf-8') as f:
