@@ -6,8 +6,8 @@
 #SBATCH --nodes=1
 #SBATCH --time=72:00:00
 #SBATCH --mem=64G
-#SBATCH --output=./slurm/sph_pred.out
-#SBATCH --error=./slurm/sph_err.out
+#SBATCH --output=./slurm/sphsimulfit_pred.out
+#SBATCH --error=./slurm/sphsimulfit_err.out
 #SBATCH --mail-user=kiranvad@uw.edu
 #SBATCH --mail-type=END
 #SBATCH --export=all
@@ -31,6 +31,6 @@ pwd
 ulimit -s unlimited
 
 echo "Launch Python job"
-python -u ./fitting.py  sph > ./slurm/logging_sph.out
+python -u ./simul_fit_sph.py > ./slurm/sphsimulfit_logging.out
 echo "All Done!"
 exit
