@@ -35,7 +35,8 @@ def Iq(q,
         d_penetration=1,
         n_aggreg=67):
     # print(v_core, v_corona, sld_solvent, sld_core, sld_corona,radius_core, rg, d_penetration, n_aggreg)
-    n_aggreg = (4/3)*np.pi*(radius_core**3)/v_core
+    # n_aggreg = (4/3)*np.pi*(radius_core**3)/v_core 
+    radius_core = ((n_aggreg*v_core)/((4/3)*np.pi))**(1/3)
     v_total = n_aggreg*(v_core+v_corona)
     rho_solv = sld_solvent     # sld of solvent [1/A^2]
     rho_core = sld_core        # sld of core [1/A^2]

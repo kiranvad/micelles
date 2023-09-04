@@ -19,7 +19,7 @@ SLD_SOLVENT_LIST = {'dTHF': 6.349, 'THF': 0.183, 'D2O':6.36,
 'H2O':-0.561, 'dCF': 3.156, 'dTol':5.664, 'dAcetone':5.389,
 'dTHF0':6.360, 'dTHF25':6.357, 'dTHF50':6.355, 'dTHF75':6.352,'hTHF':1.0
 }
-NUM_STEPS = 5 if TESTING else 7e2 
+NUM_STEPS = 5 if TESTING else 1e3 
 
 SI_FILE_LOC = './EXPTDATA_V2/sample_info_OMIECS.csv'
 DATA_DIR = './EXPTDATA_V2/inco_bg_sub/'
@@ -49,7 +49,7 @@ def setup_model():
     # use default bounds
     bumps_model.v_core.range(1e0, 1e8) 
     bumps_model.v_corona.range(1e0, 1e8)
-    bumps_model.n_aggreg.fixed = True
+    # bumps_model.n_aggreg.range(3, 40)
     # use fixed values
     bumps_model.background.fixed = True 
     bumps_model.background.value = 0.0
@@ -75,13 +75,13 @@ def fit_files_model(fnames, savedir):
     sas_model, bumps_model = setup_model()
     bumps_model.sld_solvent.value = SLD_SOLVENT
     free = FreeVariables(names=['data_%d'%i for i in range(len(datasets))],
-                        radius_core = bumps_model.radius_core,
+                        n_aggreg = bumps_model.n_aggreg,
                         radius_core_pd = bumps_model.radius_core_pd,
                         rg = bumps_model.rg,
                         d_penetration = bumps_model.d_penetration, 
                         scale = bumps_model.scale,
                         )
-    free.radius_core.range(20.0, 200.0)
+    free.n_aggreg.range(3.0, 40.0)
     free.radius_core_pd.range(0.0, 0.5)
     free.rg.range(0.0, 200.0)
     free.d_penetration.range(0.75, 1.1)
@@ -189,7 +189,11 @@ if __name__=="__main__":
             for name, param in free_pars.items():
                 file_pars[name].set(param[i].value)
             for name, param in file_pars.items():
-                fitted_params[name] = param.value
+                if name=="radius_core":
+                    radius_core = ((file_pars['n_aggreg'].value *file_pars['v_core'].value)/((4/3)*np.pi))**(1/3)
+                    fitted_params[name] = radius_core
+                else:
+                    fitted_params[name] = param.value
             # add current fname params to json
             json_output[fname] = fitted_params
 
