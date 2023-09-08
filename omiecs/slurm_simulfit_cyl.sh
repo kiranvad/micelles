@@ -6,8 +6,8 @@
 #SBATCH --nodes=1
 #SBATCH --time=72:00:00
 #SBATCH --mem=64G
-#SBATCH --output=./slurm/cyl_pred.out
-#SBATCH --error=./slurm/cyl_err.out
+#SBATCH --output=./slurm/cylsimulfit_pred.out
+#SBATCH --error=./slurm/cylsimulfit_err.out
 #SBATCH --mail-user=kiranvad@uw.edu
 #SBATCH --mail-type=END
 #SBATCH --export=all
@@ -31,6 +31,6 @@ pwd
 ulimit -s unlimited
 
 echo "Launch Python job"
-python -u ./fitting.py  cyl > ./slurm/logging_cyl.out
+python -u ./simul_fit_cyl.py > ./slurm/cylsimulfit_logging.out
 echo "All Done!"
 exit

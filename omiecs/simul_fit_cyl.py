@@ -19,8 +19,25 @@ SLD_SOLVENT_LIST = {'dTHF': 6.349, 'THF': 0.183, 'D2O':6.36,
 'H2O':-0.561, 'dCF': 3.156, 'dTol':5.664, 'dAcetone':5.389,
 'dTHF0':6.360, 'dTHF25':6.357, 'dTHF50':6.355, 'dTHF75':6.352,'hTHF':1.0
 }
+
+block_params = {'DEG': {'density':1.1, 'MW':188.22},
+                'PEG': {'density':1.09, 'MW': 480.0},
+                'F': {'density':1.418, 'MW':254.10}
+                } 
+DOP = {'DEG50F25' : (45, 30), # (EG, F)
+       'DEG50F25b': (48, 27), 
+       'DEG50F50' : (48, 52),
+       'DEG50F75' : (46.25, 78.75),
+       'PEG50F25' : (41.25, 33.75),
+       'PEG50F50' : (50, 50)
+       }
+Navg = 6.02e23 
+conversion = 1e24
+block_vols = {}
+for key, value in block_params.items():
+    block_vols[key] = conversion*((value['MW']/value['density'])/Navg)
+
 NUM_STEPS = 5 if TESTING else 5e2 
-MODEL = 'cyl'
 
 SI_FILE_LOC = './EXPTDATA_V2/sample_info_OMIECS.csv'
 DATA_DIR = './EXPTDATA_V2/inco_bg_sub/'
@@ -43,24 +60,14 @@ def load_data_from_file(fname, use_trim=False):
     return data, metadata
 
 # %%
-def setup_model(model):
-    if model=='sph':
-        sas_model = load_model("../models/spherical_micelle.py")
-        bumps_model = Model(model=sas_model)
-
-    elif model=='cyl':
-        sas_model = load_model("../models/cylindrical_micelle.py")
-        bumps_model = Model(model=sas_model)
-
-    elif model=='elp':
-        sas_model = load_model("../models/ellipsoidal_micelle.py")
-        bumps_model = Model(model=sas_model)
-        bumps_model.eps.range(1.0,20.0)
+def setup_model():
+    sas_model = load_model("../models/cylindrical_micelle.py")
+    bumps_model = Model(model=sas_model)
 
     # use default bounds
-    bumps_model.v_core.range(1e0, 1e8) 
-    bumps_model.v_corona.range(1e0, 1e8)
-    bumps_model.n_aggreg.fixed = True
+    bumps_model.v_core.fixed = True 
+    bumps_model.v_corona.fixed = True
+    # bumps_model.n_aggreg.fixed = True
     # use fixed values
     bumps_model.background.fixed = True 
     bumps_model.background.value = 0.0
@@ -72,7 +79,7 @@ def setup_model(model):
 
     return sas_model, bumps_model
 
-def fit_files_model(fnames, model, savedir):
+def fit_files_model(fnames, savedir):
     start = time.time()
     datasets = []
     metadatasets = []
@@ -83,22 +90,33 @@ def fit_files_model(fnames, model, savedir):
 
     print('Fitting the following sample : \n', metadata)
     SLD_SOLVENT = SLD_SOLVENT_LIST[metadata.Solvent.values[0]]
-    sas_model, bumps_model = setup_model(model)
+    sas_model, bumps_model = setup_model()
     bumps_model.sld_solvent.value = SLD_SOLVENT
+    dop = DOP[metadata["Matrix"].values[0]]
+    V_CORONA = dop[0]*block_vols[metadata["EG_group"].values[0]]
+    V_CORE = dop[1]*block_vols["F"] 
+    bumps_model.v_core.value = V_CORE 
+    bumps_model.v_corona.value = V_CORONA
     free = FreeVariables(names=['data_%d'%i for i in range(len(datasets))],
+                        n_aggreg = bumps_model.n_aggreg,
                         radius_core = bumps_model.radius_core,
                         radius_core_pd = bumps_model.radius_core_pd,
                         rg = bumps_model.rg,
+                        rg_pd = bumps_model.rg_pd,
                         d_penetration = bumps_model.d_penetration, 
                         scale = bumps_model.scale,
-                        length_core = bumps_model.length_core
+                        length_core = bumps_model.length_core,
+                        length_core_pd = bumps_model.length_core_pd
                         )
+    free.n_aggreg.range(1.0, 400.0)
     free.radius_core.range(20.0, 200.0)
     free.radius_core_pd.range(0.0, 0.5)
     free.rg.range(0.0, 200.0)
+    free.rg_pd.range(0.0, 0.3)
     free.d_penetration.range(0.75, 1.1)
     free.scale.range(1e-15, 1e-5)
     free.length_core.range(20.0,1000.0)
+    free.length_core_pd.range(0.0, 0.5)
 
     print('Using the following model for fitting : \n', sas_model.info.name)
     expt = [Experiment(data=data, model=bumps_model, name='data_%d'%i) for i,data in enumerate(datasets)]
@@ -181,8 +199,8 @@ if __name__=="__main__":
     for FIT_BLOCK_KEY in BLOCK_KEYS: 
         fit_name = "%s_%s"%(FIT_BLOCK_KEY[0], FIT_BLOCK_KEY[1])
         if not TESTING:
-            BASE_SAVE_DIR = './results_simulfit_%s/'%MODEL
-            SAVE_DIR = BASE_SAVE_DIR+'%s/'%(MODEL, fit_name)
+            BASE_SAVE_DIR = './results_simulfit_cyl/'
+            SAVE_DIR = BASE_SAVE_DIR+'%s/'%(fit_name)
         else:
             SAVE_DIR = './test/'
 
@@ -191,7 +209,7 @@ if __name__=="__main__":
         os.makedirs(SAVE_DIR)
         print('Saving the results to %s'%SAVE_DIR)
         SIMUL_FILENAMES = get_simul_filenames(FIT_BLOCK_KEY)
-        datasets, metadatasets, problem, bumps_model, driver = fit_files_model(SIMUL_FILENAMES, MODEL, SAVE_DIR)
+        datasets, metadatasets, problem, bumps_model, driver = fit_files_model(SIMUL_FILENAMES, SAVE_DIR)
         all_pars = problem.model_parameters()
         model_pars = all_pars["models"][0]
         free_pars = all_pars["freevars"]
@@ -202,7 +220,11 @@ if __name__=="__main__":
             for name, param in free_pars.items():
                 file_pars[name].set(param[i].value)
             for name, param in file_pars.items():
-                fitted_params[name] = param.value
+                if name=="radius_core":
+                    radius_core = ((file_pars["n_aggreg"]*file_pars["v_core"])/(np.pi*file_pars["length_core"]))**(1/2)
+                    fitted_params[name] = radius_core
+                else:
+                    fitted_params[name] = param.value
             # add current fname params to json
             json_output[fname] = fitted_params
 

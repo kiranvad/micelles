@@ -66,7 +66,8 @@ def Iq(q,
        n_aggreg=67
        ):
     
-    n_aggreg = (np.pi * radius_core**2 * length_core)/v_core
+    # n_aggreg = (np.pi * radius_core**2 * length_core)/v_core 
+    radius_core = ( (n_aggreg*v_core)/(np.pi * length_core) )**(1/2)
     v_total = n_aggreg*(v_core+v_corona)
     rho_solv = sld_solvent     # sld of solvent [1/A^2]
     rho_core = sld_core        # sld of core [1/A^2]

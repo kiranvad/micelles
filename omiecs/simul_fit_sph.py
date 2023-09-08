@@ -19,6 +19,23 @@ SLD_SOLVENT_LIST = {'dTHF': 6.349, 'THF': 0.183, 'D2O':6.36,
 'H2O':-0.561, 'dCF': 3.156, 'dTol':5.664, 'dAcetone':5.389,
 'dTHF0':6.360, 'dTHF25':6.357, 'dTHF50':6.355, 'dTHF75':6.352,'hTHF':1.0
 }
+block_params = {'DEG': {'density':1.1, 'MW':188.22},
+                'PEG': {'density':1.09, 'MW': 480.0},
+                'F': {'density':1.418, 'MW':254.10}
+                } 
+DOP = {'DEG50F25' : (45, 30), # (EG, F)
+       'DEG50F25b': (48, 27), 
+       'DEG50F50' : (48, 52),
+       'DEG50F75' : (46.25, 78.75),
+       'PEG50F25' : (41.25, 33.75),
+       'PEG50F50' : (50, 50)
+       }
+Navg = 6.02e23 
+conversion = 1e24
+block_vols = {}
+for key, value in block_params.items():
+    block_vols[key] = conversion*((value['MW']/value['density'])/Navg)
+
 NUM_STEPS = 5 if TESTING else 1e3 
 
 SI_FILE_LOC = './EXPTDATA_V2/sample_info_OMIECS.csv'
@@ -47,8 +64,8 @@ def setup_model():
     bumps_model = Model(model=sas_model)
 
     # use default bounds
-    bumps_model.v_core.range(1e0, 1e8) 
-    bumps_model.v_corona.range(1e0, 1e8)
+    bumps_model.v_core.fixed = True 
+    bumps_model.v_corona.fixed = True
     # bumps_model.n_aggreg.range(3, 40)
     # use fixed values
     bumps_model.background.fixed = True 
@@ -74,16 +91,23 @@ def fit_files_model(fnames, savedir):
     SLD_SOLVENT = SLD_SOLVENT_LIST[metadata.Solvent.values[0]]
     sas_model, bumps_model = setup_model()
     bumps_model.sld_solvent.value = SLD_SOLVENT
+    dop = DOP[metadata["Matrix"].values[0]]
+    V_CORONA = dop[0]*block_vols[metadata["EG_group"].values[0]]
+    V_CORE = dop[1]*block_vols["F"] 
+    bumps_model.v_core.value = V_CORE 
+    bumps_model.v_corona.value = V_CORONA
     free = FreeVariables(names=['data_%d'%i for i in range(len(datasets))],
                         n_aggreg = bumps_model.n_aggreg,
                         radius_core_pd = bumps_model.radius_core_pd,
                         rg = bumps_model.rg,
+                        rg_pd = bumps_model.rg_pd,
                         d_penetration = bumps_model.d_penetration, 
                         scale = bumps_model.scale,
                         )
     free.n_aggreg.range(3.0, 40.0)
     free.radius_core_pd.range(0.0, 0.5)
     free.rg.range(0.0, 200.0)
+    free.rg_pd.range(0.0, 0.3)
     free.d_penetration.range(0.75, 1.1)
     free.scale.range(1e-15, 1e-5)
 
@@ -151,7 +175,6 @@ if __name__=="__main__":
     BLOCK_KEYS = [('DEG', '25b'), ('DEG', '50'), ('DEG', '75'), ('PEG', '25'), ('PEG', '50')]
     SI = pd.read_csv(SI_FILE_LOC)
     counter = 0
-    json_output = {}
     SI = pd.read_csv(SI_FILE_LOC)
 
     def get_simul_filenames(FIT_BLOCK_KEY):
@@ -171,6 +194,7 @@ if __name__=="__main__":
             BASE_SAVE_DIR = './results_simulfit_sph/'
             SAVE_DIR = BASE_SAVE_DIR+'%s/'%(fit_name)
         else:
+            BASE_SAVE_DIR = "./test/"
             SAVE_DIR = './test/'
 
         if os.path.exists(SAVE_DIR):
@@ -190,22 +214,15 @@ if __name__=="__main__":
                 file_pars[name].set(param[i].value)
             for name, param in file_pars.items():
                 if name=="radius_core":
-                    radius_core = ((file_pars['n_aggreg'].value *file_pars['v_core'].value)/((4/3)*np.pi))**(1/3)
+                    radius_core = ((file_pars['n_aggreg'].value * file_pars['v_core'].value)/((4/3)*np.pi))**(1/3)
                     fitted_params[name] = radius_core
                 else:
                     fitted_params[name] = param.value
-            # add current fname params to json
-            json_output[fname] = fitted_params
+            with open(BASE_SAVE_DIR+"%s.json"%(fname.split('.')[0]), 'w', encoding='utf-8') as f:
+                json.dump(fitted_params, f, ensure_ascii=False, indent=4)
 
         if TESTING:
             break
-
-    if not TESTING:
-        with open(BASE_SAVE_DIR+"output.json", 'w', encoding='utf-8') as f:
-            json.dump(json_output, f, ensure_ascii=False, indent=4)
-    else:
-        with open("./test/output.json", 'w', encoding='utf-8') as f:
-            json.dump(json_output, f, ensure_ascii=False, indent=4)
 
     JOB_END_TIME = time.time()
     time_str =  str(datetime.timedelta(seconds=JOB_END_TIME-JOB_START_TIME)) 

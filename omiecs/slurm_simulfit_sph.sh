@@ -4,7 +4,7 @@
 #SBATCH --account=cheme
 #SBATCH --partition=compute
 #SBATCH --nodes=1
-#SBATCH --time=24:00:00
+#SBATCH --time=72:00:00
 #SBATCH --mem=64G
 #SBATCH --output=./slurm/sphsimulfit_pred.out
 #SBATCH --error=./slurm/sphsimulfit_err.out
