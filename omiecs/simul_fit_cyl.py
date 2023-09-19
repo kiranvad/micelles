@@ -102,21 +102,15 @@ def fit_files_model(fnames, savedir):
                         radius_core = bumps_model.radius_core,
                         radius_core_pd = bumps_model.radius_core_pd,
                         rg = bumps_model.rg,
-                        rg_pd = bumps_model.rg_pd,
-                        d_penetration = bumps_model.d_penetration, 
                         scale = bumps_model.scale,
                         length_core = bumps_model.length_core,
-                        length_core_pd = bumps_model.length_core_pd
                         )
     free.n_aggreg.range(1.0, 400.0)
     free.radius_core.range(20.0, 200.0)
     free.radius_core_pd.range(0.0, 0.5)
     free.rg.range(0.0, 200.0)
-    free.rg_pd.range(0.0, 0.3)
-    free.d_penetration.range(0.75, 1.1)
     free.scale.range(1e-15, 1e-5)
     free.length_core.range(20.0,1000.0)
-    free.length_core_pd.range(0.0, 0.5)
 
     print('Using the following model for fitting : \n', sas_model.info.name)
     expt = [Experiment(data=data, model=bumps_model, name='data_%d'%i) for i,data in enumerate(datasets)]
@@ -182,9 +176,7 @@ if __name__=="__main__":
     BLOCK_KEYS = [('DEG', '25b'), ('DEG', '50'), ('DEG', '75'), ('PEG', '25'), ('PEG', '50')]
     SI = pd.read_csv(SI_FILE_LOC)
     counter = 0
-    json_output = {}
-    SI = pd.read_csv(SI_FILE_LOC)
-
+    
     def get_simul_filenames(FIT_BLOCK_KEY):
         SIMUL_FILENAMES = [] 
         for key, values in SI.iterrows():
@@ -202,6 +194,7 @@ if __name__=="__main__":
             BASE_SAVE_DIR = './results_simulfit_cyl/'
             SAVE_DIR = BASE_SAVE_DIR+'%s/'%(fit_name)
         else:
+            BASE_SAVE_DIR = './test/'
             SAVE_DIR = './test/'
 
         if os.path.exists(SAVE_DIR):
@@ -222,21 +215,15 @@ if __name__=="__main__":
             for name, param in file_pars.items():
                 if name=="radius_core":
                     radius_core = ((file_pars["n_aggreg"]*file_pars["v_core"])/(np.pi*file_pars["length_core"]))**(1/2)
-                    fitted_params[name] = radius_core
+                    fitted_params[name] = radius_core.value
                 else:
                     fitted_params[name] = param.value
             # add current fname params to json
-            json_output[fname] = fitted_params
+            with open(BASE_SAVE_DIR+"%s.json"%(fname.split('.')[0]), 'w', encoding='utf-8') as f:
+                json.dump(fitted_params, f, ensure_ascii=False, indent=4)
 
         if TESTING:
             break
-
-    if not TESTING:
-        with open(BASE_SAVE_DIR+"output.json", 'w', encoding='utf-8') as f:
-            json.dump(json_output, f, ensure_ascii=False, indent=4)
-    else:
-        with open("./test/output.json", 'w', encoding='utf-8') as f:
-            json.dump(json_output, f, ensure_ascii=False, indent=4)
 
     JOB_END_TIME = time.time()
     time_str =  str(datetime.timedelta(seconds=JOB_END_TIME-JOB_START_TIME)) 

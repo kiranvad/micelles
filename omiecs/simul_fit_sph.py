@@ -172,7 +172,8 @@ def fit_files_model(fnames, savedir):
 if __name__=="__main__":
     JOB_START_TIME = time.time()
     FIT_KEYS = [116,118,129,125,127,132,134,135,136,138,139,140,931,932,933,964,965,970,971] 
-    BLOCK_KEYS = [('DEG', '25b'), ('DEG', '50'), ('DEG', '75'), ('PEG', '25'), ('PEG', '50')]
+    # BLOCK_KEYS = [('DEG', '25b'), ('DEG', '50'), ('DEG', '75'), ('PEG', '25'), ('PEG', '50')]
+    BLOCK_KEYS = [('PEG', '50')]
     SI = pd.read_csv(SI_FILE_LOC)
     counter = 0
     SI = pd.read_csv(SI_FILE_LOC)
@@ -214,8 +215,8 @@ if __name__=="__main__":
                 file_pars[name].set(param[i].value)
             for name, param in file_pars.items():
                 if name=="radius_core":
-                    radius_core = ((file_pars['n_aggreg'].value * file_pars['v_core'].value)/((4/3)*np.pi))**(1/3)
-                    fitted_params[name] = radius_core
+                    radius_core = ((file_pars['n_aggreg'] * file_pars['v_core'])/((4/3)*np.pi))**(1/3)
+                    fitted_params[name] = radius_core.value
                 else:
                     fitted_params[name] = param.value
             with open(BASE_SAVE_DIR+"%s.json"%(fname.split('.')[0]), 'w', encoding='utf-8') as f:
