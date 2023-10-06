@@ -1,0 +1,10 @@
+SLURM_JOBID=14953720
+SLURM_JOB_NODELIST=n3347
+SLURM_NNODES=1
+SLURMTMPDIR=
+working directory = /mmfs1/gscratch/scrubbed/kiranvad/micelles/omiecs
+python from the following environment
+/mmfs1/home/kiranvad/kiranvad/envs/micelles/bin/python
+working directory = 
+/mmfs1/gscratch/scrubbed/kiranvad/micelles/omiecs
+Launch Python job

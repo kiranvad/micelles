@@ -15,13 +15,30 @@ from bumps.fitters import *
 import argparse, glob, os, shutil, pdb, time, datetime, json
 
 # Following are most likely spherical micelles with a PHFBA core and PDEGEEA corona
-TESTING = True 
+TESTING = False 
 SLD_CORE = 1.85
 SLD_CORONA = 0.817
 SLD_SOLVENT_LIST = {'dTHF': 6.349, 'THF': 0.183, 'D2O':6.36, 
 'H2O':-0.561, 'dCF': 3.156, 'dTol':5.664, 'dAcetone':5.389,
 'dTHF0':6.360, 'dTHF25':6.357, 'dTHF50':6.355, 'dTHF75':6.352,'hTHF':1.0
 }
+block_params = {'DEG': {'density':1.1, 'MW':188.22},
+                'PEG': {'density':1.09, 'MW': 480.0},
+                'F': {'density':1.418, 'MW':254.10}
+                } 
+DOP = {'DEG50F25' : (45, 30), # (EG, F)
+       'DEG50F25b': (48, 27), 
+       'DEG50F50' : (48, 52),
+       'DEG50F75' : (46.25, 78.75),
+       'PEG50F25' : (41.25, 33.75),
+       'PEG50F50' : (50, 50)
+       }
+Navg = 6.02e23 
+conversion = 1e24
+block_vols = {}
+for key, value in block_params.items():
+    block_vols[key] = conversion*((value['MW']/value['density'])/Navg)
+
 NUM_STEPS = 5 if TESTING else 5e2
 
 SI_FILE_LOC = './EXPTDATA_V2/sample_info_OMIECS.csv'
@@ -31,9 +48,8 @@ def load_data_from_file(fname, use_trim=False):
     SI = pd.read_csv(SI_FILE_LOC)
     flag = SI["Filename"]==fname
     metadata = SI[flag]
-    with suppress(NoKnownLoaderException):
-        loader = Loader()
-        data = loader.load(DATA_DIR+'%s'%fname)[0]
+    loader = Loader()
+    data = loader.load(DATA_DIR+'%s'%fname)[0]
     
     if not use_trim:
         data.qmin = min(data.x)
@@ -59,15 +75,15 @@ def setup_model(model):
         bumps_model = Model(model=sas_model)
         bumps_model.eps.range(1.0,20.0)
 
-    bumps_model.radius_core.range(20.0, 200.0)
     bumps_model.radius_core_pd.range(0.0, 0.5)
     bumps_model.rg.range(0.0, 200.0)
+    bumps_model.rg_pd.range(0.0, 0.3)
     bumps_model.d_penetration.range(0.75, 1.0)    
     bumps_model.scale.range(1e-15, 1e-5)
     # use default bounds
-    bumps_model.v_core.fixed = False 
+    bumps_model.v_core.fixed = True 
     bumps_model.v_corona.fixed = True
-    bumps_model.n_aggreg.fixed = True
+    bumps_model.n_aggreg.range(1.0, 1000.0)
     # use fixed values
     bumps_model.background.fixed = True 
     bumps_model.background.value = 0.0
@@ -85,6 +101,11 @@ def fit_file_model(fname, model, savename):
     print('Fitting the following sample : \n', metadata)
     SLD_SOLVENT = SLD_SOLVENT_LIST[metadata.Solvent.values[0]]
     sas_model, bumps_model = setup_model(model)
+    dop = DOP[metadata["Matrix"].values[0]]
+    V_CORONA = dop[0]*block_vols[metadata["EG_group"].values[0]]
+    V_CORE = dop[1]*block_vols["F"] 
+    bumps_model.v_core.value = V_CORE 
+    bumps_model.v_corona.value = V_CORONA
     bumps_model.sld_solvent.value = SLD_SOLVENT
     print('Using the following model for fitting : \n', sas_model.info.name)
     cutoff = 1e-3  # low precision cutoff
@@ -167,7 +188,6 @@ if __name__=="__main__":
 
     SI = pd.read_csv(SI_FILE_LOC)
     counter = 0
-    json_output = {}
     for key, values in SI.iterrows():
         if values['Sample'] in FIT_KEYS:
             print('Fitting %d/%d'%(counter+1, len(FIT_KEYS)))
@@ -177,13 +197,22 @@ if __name__=="__main__":
             savename = SAVE_DIR+'%s.png'%(fname.split('.')[0])
             data, metadata, bumps_model, driver = fit_file_model(fname, model, savename)
             counter += 1
-            fitted_params = {}
-            for key, param in bumps_model.parameters().items():
-                fitted_params[key] = param.value
-            json_output[fname] = fitted_params
+            fitted_params = bumps_model.parameters() 
+            if model=="sph":
+                radius_core = ((fitted_params['n_aggreg'] * fitted_params['v_core'])/((4/3)*np.pi))**(1/3)
+            elif model=="cyl":
+                radius_core = ((fitted_params["n_aggreg"]*fitted_params["v_core"])/(np.pi*fitted_params["length_core"]))**(1/2)
+            fitted_params["radius_core"] = radius_core.value
+
+            for name, param in fitted_params.items():
+                if name=="radius_core":
+                    fitted_params["radius_core"] = radius_core.value 
+                else:
+                    fitted_params[name] = param.value
+            
+            with open(SAVE_DIR+"%s.json"%(fname.split('.')[0]), 'w', encoding='utf-8') as f:
+                json.dump(fitted_params, f, ensure_ascii=False, indent=4)
 
             if TESTING:
                 break
     
-    with open(SAVE_DIR+'output.json', 'w', encoding='utf-8') as f:
-        json.dump(json_output, f, ensure_ascii=False, indent=4)
