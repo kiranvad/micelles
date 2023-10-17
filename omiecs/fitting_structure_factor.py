@@ -1,3 +1,4 @@
+# %%
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -6,14 +7,15 @@ from sasdata.dataloader.loader import Loader
 from sasdata.data_util.loader_exceptions import NoKnownLoaderException
 from contextlib import suppress
 from sasmodels.bumps_model import Model, Experiment
+from sasmodels.mixture import *
 
 from bumps.names import FitProblem
-from bumps.fitters import fit
 from bumps.mapper import MPIMapper
 from bumps.fitters import * 
 
 import argparse, glob, os, shutil, pdb, time, datetime, json
 
+# %%
 # Following are most likely spherical micelles with a PHFBA core and PDEGEEA corona
 TESTING = False 
 SLD_CORE = 1.85
@@ -44,6 +46,10 @@ NUM_STEPS = 5 if TESTING else 5e2
 SI_FILE_LOC = './EXPTDATA_V2/sample_info_OMIECS.csv'
 DATA_DIR = './EXPTDATA_V2/inco_bg_sub/'
 
+# %% [markdown]
+# ## Loading the data and fitted params
+
+# %%
 def load_data_from_file(fname, use_trim=False):
     SI = pd.read_csv(SI_FILE_LOC)
     flag = SI["Filename"]==fname
@@ -61,40 +67,50 @@ def load_data_from_file(fname, use_trim=False):
     return data, metadata
 
 def setup_model(model):
+    hardsphere = load_model("hardsphere")
+    # read more about it here https://pubs.rsc.org/en/content/articlelanding/2022/cp/d2cp00477a
+    # and https://doi.org/10.1063/1.446055
     if model=='sph':
         sas_model = load_model("../models/spherical_micelle.py")
-        bumps_model = Model(model=sas_model)
-
     elif model=='cyl':
         sas_model = load_model("../models/cylindrical_micelle.py")
-        bumps_model = Model(model=sas_model)
-        bumps_model.length_core.range(20.0,1000.0)
-
     elif model=='elp':
         sas_model = load_model("../models/ellipsoidal_micelle.py")
-        bumps_model = Model(model=sas_model)
-        bumps_model.eps.range(1.0,20.0)
 
-    bumps_model.radius_core_pd.range(0.0, 0.5)
-    bumps_model.rg.range(0.0, 200.0)
-    bumps_model.rg_pd.range(0.0, 0.3)
-    bumps_model.d_penetration.range(0.75, 1.0)    
-    bumps_model.scale.range(1e-15, 1e-5)
+    if model=="cyl":
+        bumps_model.B_length_core.range(20.0,1000.0)
+    elif model=="elp":
+        bumps_model.B_eps.range(1.0,20.0)
+
+    model_info = make_mixture_info([hardsphere.info, sas_model.info], operation="+")
+    model = MixtureModel(model_info, [hardsphere, sas_model])
+    bumps_model = Model(model=model)
+
+    bumps_model.B_radius_core_pd.range(0.0, 0.5)
+    bumps_model.B_rg.range(0.0, 200.0)
+    bumps_model.B_rg_pd.range(0.0, 0.3)
+    bumps_model.B_d_penetration.range(0.75, 1.0)    
+    bumps_model.B_scale.range(1e-15, 1e-5)
     # use default bounds
-    bumps_model.v_core.fixed = True 
-    bumps_model.v_corona.fixed = True
-    bumps_model.n_aggreg.range(1.0, 1000.0)
+    bumps_model.B_v_core.fixed = True 
+    bumps_model.B_v_corona.fixed = True
+    bumps_model.B_n_aggreg.range(1.0, 1000.0)
     # use fixed values
     bumps_model.background.fixed = True 
     bumps_model.background.value = 0.0
-    bumps_model.sld_core.fixed = True 
-    bumps_model.sld_core.value = SLD_CORE
-    bumps_model.sld_corona.fixed = True 
-    bumps_model.sld_corona.value = SLD_CORONA
-    bumps_model.sld_solvent.fixed = True 
+    bumps_model.B_sld_core.fixed = True 
+    bumps_model.B_sld_core.value = SLD_CORE
+    bumps_model.B_sld_corona.fixed = True 
+    bumps_model.B_sld_corona.value = SLD_CORONA
+    bumps_model.B_sld_solvent.fixed = True 
+
+    # ranges of SQ interactions
+    bumps_model.A_radius_effective.range(10,100)
+    bumps_model.A_volfraction.range(0.0,1.0) 
 
     return sas_model, bumps_model
 
+# %%
 def fit_file_model(fname, model, savename):
     start = time.time()
     data, metadata = load_data_from_file(fname, use_trim=True)
@@ -104,9 +120,9 @@ def fit_file_model(fname, model, savename):
     dop = DOP[metadata["Matrix"].values[0]]
     V_CORONA = dop[0]*block_vols[metadata["EG_group"].values[0]]
     V_CORE = dop[1]*block_vols["F"] 
-    bumps_model.v_core.value = V_CORE 
-    bumps_model.v_corona.value = V_CORONA
-    bumps_model.sld_solvent.value = SLD_SOLVENT
+    bumps_model.B_v_core.value = V_CORE 
+    bumps_model.B_v_corona.value = V_CORONA
+    bumps_model.B_sld_solvent.value = SLD_SOLVENT
     print('Using the following model for fitting : \n', sas_model.info.name)
     cutoff = 1e-3  # low precision cutoff
     expt = Experiment(data=data, model=bumps_model, cutoff=cutoff)
@@ -157,7 +173,6 @@ def fit_file_model(fname, model, savename):
     plt.tight_layout()
     plt.savefig(savename)
     plt.close()
-
     end = time.time()
     time_str =  str(datetime.timedelta(seconds=end-start)) 
     print('Total fitting time : %s'%(time_str))
@@ -173,7 +188,7 @@ if __name__=="__main__":
     FIT_KEYS = [116,118,129,125,127,132,134,135,136,138,139,140,931,932,933,964,965,970,971]
 
     if not TESTING:
-        SAVE_DIR = './results_%s/'%model
+        SAVE_DIR = './results_SQ_%s/'%model
     else:
         SAVE_DIR = './test/'
     if os.path.exists(SAVE_DIR):
@@ -194,15 +209,13 @@ if __name__=="__main__":
             counter += 1
             fitted_params = bumps_model.parameters() 
             if model=="sph":
-                radius_core = ((fitted_params['n_aggreg'] * fitted_params['v_core'])/((4/3)*np.pi))**(1/3)
+                radius_core = ((fitted_params['B_n_aggreg'] * fitted_params['B_v_core'])/((4/3)*np.pi))**(1/3)
             elif model=="cyl":
-                radius_core = ((fitted_params["n_aggreg"]*fitted_params["v_core"])/(np.pi*fitted_params["length_core"]))**(1/2)
-            fitted_params["radius_core"] = radius_core.value
+                radius_core = ((fitted_params["B_n_aggreg"]*fitted_params["B_v_core"])/(np.pi*fitted_params["B_length_core"]))**(1/2)
+            fitted_params["B_radius_core"] = radius_core.value
 
             for name, param in fitted_params.items():
-                if name=="radius_core":
-                    fitted_params["radius_core"] = radius_core.value 
-                else:
+                if not name=="B_radius_core":
                     fitted_params[name] = param.value
             
             with open(SAVE_DIR+"%s.json"%(fname.split('.')[0]), 'w', encoding='utf-8') as f:
@@ -210,4 +223,8 @@ if __name__=="__main__":
 
             if TESTING:
                 break
-    
+
+# %%
+
+
+

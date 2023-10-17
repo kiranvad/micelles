@@ -1,13 +1,13 @@
 #!/bin/bash
 
-#SBATCH --job-name=cyl-omiecs
+#SBATCH --job-name=sph-SQ
 #SBATCH --account=cheme
 #SBATCH --partition=compute
 #SBATCH --nodes=1
 #SBATCH --time=84:00:00
 #SBATCH --mem=64G
-#SBATCH --output=./slurm/cyl.out
-#SBATCH --error=./slurm/cyl.err
+#SBATCH --output=./slurm/sph_sq.out
+#SBATCH --error=./slurm/sph_sq.err
 #SBATCH --mail-user=kiranvad@uw.edu
 #SBATCH --mail-type=END
 #SBATCH --export=all
@@ -31,6 +31,6 @@ pwd
 ulimit -s unlimited
 
 echo "Launch Python job"
-python -u ./fitting.py cyl > ./slurm/cyl.log
+python -u ./fitting_structure_factor.py sph > ./slurm/sph_sq.log
 echo "All Done!"
 exit
