@@ -170,10 +170,12 @@ if __name__=="__main__":
                         help='Specify the analytical model to be used') 
     args = parser.parse_args()
     model = args.model
-    FIT_KEYS = [116,118,129,125,127,132,134,135,136,138,139,140,931,932,933,964,965,970,971]
+    # FIT_KEYS = [116,118,129,125,127,132,134,135,136,138,139,140,931,932,933,964,965,970,971]
+    # FIT_KEYS = [951,141,140,139,138,965,971,935,950,137,934,136,135,134,964,970]     # fit only the PEG based polymers
+    FIT_KEYS = [934,935] # fit only curves that have cylindrical micelle upturn at low q
 
     if not TESTING:
-        SAVE_DIR = './results_%s/'%model
+        SAVE_DIR = './results_PEG_%s/'%model
     else:
         SAVE_DIR = './test/'
     if os.path.exists(SAVE_DIR):
