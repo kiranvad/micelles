@@ -1,5 +1,5 @@
-SLURM_JOBID=15149892
-SLURM_JOB_NODELIST=n3293
+SLURM_JOBID=15147506
+SLURM_JOB_NODELIST=n3279
 SLURM_NNODES=1
 SLURMTMPDIR=
 working directory = /mmfs1/gscratch/scrubbed/kiranvad/micelles/omiecs

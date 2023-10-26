@@ -82,7 +82,7 @@ def setup_model(model):
     elif model=="elp":
         bumps_model.B_eps.range(1.0,20.0)
 
-    model_info = make_mixture_info([hardsphere.info, sas_model.info], operation="+")
+    model_info = make_mixture_info([hardsphere.info, sas_model.info], operation="*")
     model = MixtureModel(model_info, [hardsphere, sas_model])
     bumps_model = Model(model=model)
 
@@ -90,7 +90,7 @@ def setup_model(model):
     bumps_model.B_rg.range(0.0, 200.0)
     bumps_model.B_rg_pd.range(0.0, 0.3)
     bumps_model.B_d_penetration.range(0.75, 1.0)    
-    bumps_model.B_scale.range(1e-15, 1e-5)
+    bumps_model.scale.range(1e-15, 1e-5)
     # use default bounds
     bumps_model.B_v_core.fixed = True 
     bumps_model.B_v_corona.fixed = True
@@ -185,10 +185,11 @@ if __name__=="__main__":
                         help='Specify the analytical model to be used') 
     args = parser.parse_args()
     model = args.model
-    FIT_KEYS = [116,118,129,125,127,132,134,135,136,138,139,140,931,932,933,964,965,970,971]
+    # FIT_KEYS = [116,118,129,125,127,132,134,135,136,138,139,140,931,932,933,964,965,970,971]
+    FIT_KEYS = [951,141,140,139,138,965,971,935,950,137,934,136,135,134,964,970]     # fit only the PEG based polymers
 
     if not TESTING:
-        SAVE_DIR = './results_SQ_%s/'%model
+        SAVE_DIR = './results_PEG_SQ_%s/'%model
     else:
         SAVE_DIR = './test/'
     if os.path.exists(SAVE_DIR):
