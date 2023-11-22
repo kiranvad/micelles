@@ -28,12 +28,12 @@ block_params = {'DEG': {'density':1.1, 'MW':188.22},
                 'PEG': {'density':1.09, 'MW': 480.0},
                 'F': {'density':1.418, 'MW':254.10}
                 } 
-DOP = {'DEG50F25' : (45, 30), # (EG, F)
-       'DEG50F25b': (48, 27), 
-       'DEG50F50' : (48, 52),
-       'DEG50F75' : (46.25, 78.75),
-       'PEG50F25' : (41.25, 33.75),
-       'PEG50F50' : (50, 50)
+DOP = {'DEG50F25' : (42, 28), # (EG, F)
+       'DEG50F25b': (40, 23), 
+       'DEG50F50' : (43, 46),
+       'DEG50F75' : (44, 74),
+       'PEG50F25' : (40, 33),
+       'PEG50F50' : (57, 57)
        }
 Navg = 6.02e23 
 conversion = 1e24
@@ -77,15 +77,14 @@ def setup_model(model):
     elif model=='elp':
         sas_model = load_model("../models/ellipsoidal_micelle.py")
 
+    model_info = make_mixture_info([hardsphere.info, sas_model.info], operation="*")
+    model = MixtureModel(model_info, [hardsphere, sas_model])
+    bumps_model = Model(model=model)
+    
     if model=="cyl":
         bumps_model.B_length_core.range(20.0,1000.0)
     elif model=="elp":
         bumps_model.B_eps.range(1.0,20.0)
-
-    model_info = make_mixture_info([hardsphere.info, sas_model.info], operation="*")
-    model = MixtureModel(model_info, [hardsphere, sas_model])
-    bumps_model = Model(model=model)
-
     bumps_model.B_radius_core_pd.range(0.0, 0.5)
     bumps_model.B_rg.range(0.0, 200.0)
     bumps_model.B_rg_pd.range(0.0, 0.3)
@@ -185,8 +184,7 @@ if __name__=="__main__":
                         help='Specify the analytical model to be used') 
     args = parser.parse_args()
     model = args.model
-    # FIT_KEYS = [116,118,129,125,127,132,134,135,136,138,139,140,931,932,933,964,965,970,971]
-    FIT_KEYS = [951,141,140,139,138,965,971,935,950,137,934,136,135,134,964,970]     # fit only the PEG based polymers
+    FIT_KEYS = [116,118,129,125,127,132,134,135,136,137,138,139,140,141,931,932,933,934,935,950,951,964,965,970,971]
 
     if not TESTING:
         SAVE_DIR = './results_PEG_SQ_%s/'%model

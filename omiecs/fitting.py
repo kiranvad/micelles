@@ -15,7 +15,7 @@ from bumps.fitters import *
 import argparse, glob, os, shutil, pdb, time, datetime, json
 
 # Following are most likely spherical micelles with a PHFBA core and PDEGEEA corona
-TESTING = False 
+TESTING = True 
 SLD_CORE = 1.85
 SLD_CORONA = 0.817
 SLD_SOLVENT_LIST = {'dTHF': 6.349, 'THF': 0.183, 'D2O':6.36, 
@@ -78,7 +78,7 @@ def setup_model(model):
     bumps_model.radius_core_pd.range(0.0, 0.5)
     bumps_model.rg.range(0.0, 200.0)
     bumps_model.rg_pd.range(0.0, 0.3)
-    bumps_model.d_penetration.range(0.75, 1.0)    
+    bumps_model.d_penetration.range(0.75, 1.0) 
     bumps_model.scale.range(1e-15, 1e-5)
     # use default bounds
     bumps_model.v_core.fixed = True 

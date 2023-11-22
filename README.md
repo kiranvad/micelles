@@ -27,6 +27,9 @@ pip install sasmodels sasdata
 pip install pandas matplotlib openpyxl bumps
 ```
 
+if you are trying to use the `env.yml` file to install a fresh environment, `numpy` package needs to be installed seperately to potentially avoid the [following issue](https://stackoverflow.com/q/77364550).
+
+The repository now also has a `requirements.txt` file to install in a fresh environment without going through the `env.yml` installation.
 ### Known issues:
 1. Form factors of worm-like and vesicle-shaped micelles doesn't work as expected.
 
