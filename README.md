@@ -19,10 +19,19 @@ There two ways you can use this code:
 1. Using the popular `sasmodels` : See the example in [sasmodels.ipynb](/sasmodels.ipynb)
 2. Using seperate notebooks for each one of them : see the examples in [notebooks folder](/notebooks)
 
-If you are interested in fitting these models using the `bumps` interface of `sasmodels`, see the example in [optimize.py](/optimize.py)
+If you are interested in fitting these models using the `bumps` interface of `sasmodels`, see the example in [optimize.py](/optimize.py) 
+
+
+## Using these modes in a GUI (MacOS)
+You can use these custom models in SasView GUI using their `plugin_models` capabilities. Follow the instructions below to make the plugin models available for use in a GUI.
+
+1. Locate the following folder on your Mac hard drive: `/users/<your_username>/.sasview/plugin_models/`. 
+Note that to locate the`.` folders, you need to press `Command + Shift + . (the period key)` after you are in the `/users/` folder.
+
+2. You can now copy the Python files related to the models into this folder and they should be available for use when you reopen SasView. 
 
 ### Known issues:
-1. Form factors of worm-like and vesicle-shaped micelles doesn't work as expected.
+
 
 ### To-Do : 
 
