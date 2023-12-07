@@ -16,8 +16,7 @@ This repository contains python code to compute form factors of micellese descri
 ```
 
 There two ways you can use this code:
-1. Using the popular `sasmodels` : See the example in [sasmodels.ipynb](/sasmodels.ipynb)
-2. Using seperate notebooks for each one of them : see the examples in [notebooks folder](/notebooks)
+1. Using the popular `sasmodels`: See the example in [sasmodels.ipynb]Using separate notebooks for each one of them: see the examples in [notebooks folder](/notebooks)
 
 If you are interested in fitting these models using the `bumps` interface of `sasmodels`, see the example in [optimize.py](/optimize.py) 
 
@@ -39,8 +38,7 @@ Note that to locate the`.` folders, you need to press `Command + Shift + . (the 
 
 ### Typical troubleshooting : 
 
-1. Issues with data loader:
-Primary reseaon for this is the consistency between what you see on sasmodels github vs what is actually on the PyPI. The github version moved on to using the standalone `sasdata` package while the PyPI install still uses `sas.sascalc`. So instead of doing:
+1. Issues with data loader: The primary reason for this is the consistency between what you see on sasmodels Git Hub vs what is actually on the PyPI. The GitHub version moved on to using the standalone `sasdata` package while the PyPI install still uses `sas.sascalc`. So instead of doing:
 ```python
 sasmodels.data.load_data('your_file_name.ext')
 ```
@@ -50,4 +48,4 @@ from sasdata.dataloader.loader import Loader
 loader_module = Loader()
 loaded_data_sets = loader_module.load('your_file_name.ext')
 ```
-I am not sure if you are using the installation of sasview directly, this is not a problem at all.
+I am not sure if you are using the installation of Sasview directly, this is not a problem at all.

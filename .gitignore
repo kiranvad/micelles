@@ -135,4 +135,6 @@ SOURCE/
 test/*
 ext/*
 subtracted_incoherent/
-*.DS_Store
+*.DS_Store 
+omiecs/EXPTDATA_V2/
+.vscode/
