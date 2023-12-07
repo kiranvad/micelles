@@ -1,13 +1,13 @@
 #!/bin/bash
 
-#SBATCH --job-name=sph-PEG
+#SBATCH --job-name=cyl
 #SBATCH --account=cheme
 #SBATCH --partition=compute
 #SBATCH --nodes=1
 #SBATCH --time=84:00:00
 #SBATCH --mem=64G
-#SBATCH --output=./slurm/peg_cyl.out
-#SBATCH --error=./slurm/peg_cyl.err
+#SBATCH --output=./slurm/cyl.out
+#SBATCH --error=./slurm/cyl.err
 #SBATCH --mail-user=kiranvad@uw.edu
 #SBATCH --mail-type=END
 #SBATCH --export=all
@@ -31,6 +31,6 @@ pwd
 ulimit -s unlimited
 
 echo "Launch Python job"
-python -u ./fitting.py cyl > ./slurm/peg_cyl.log
+python -u ./fitting.py cyl > ./slurm/cyl.log
 echo "All Done!"
 exit

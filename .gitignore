@@ -135,4 +135,5 @@ SOURCE/
 test/*
 ext/*
 subtracted_incoherent/
-*.csv
+*.csv 
+omiecs/EXPTDATA_V2/

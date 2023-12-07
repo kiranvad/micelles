@@ -15,13 +15,13 @@ from bumps.fitters import *
 import argparse, glob, os, shutil, pdb, time, datetime, json
 
 # Following are most likely spherical micelles with a PHFBA core and PDEGEEA corona
-TESTING = True 
+TESTING = False 
 SLD_CORE = 1.85
 SLD_CORONA = 0.817
 SLD_SOLVENT_LIST = {'dTHF': 6.349, 'THF': 0.183, 'D2O':6.36, 
 'H2O':-0.561, 'dCF': 3.156, 'dTol':5.664, 'dAcetone':5.389,
-'dTHF0':6.360, 'dTHF25':6.357, 'dTHF50':6.355, 'dTHF75':6.352,'hTHF':1.0
-}
+'dTHF0':6.360, 'dTHF25':6.357, 'dTHF50':6.355, 'dTHF75':6.352,'hTHF':1.0}
+
 block_params = {'DEG': {'density':1.1, 'MW':188.22},
                 'PEG': {'density':1.09, 'MW': 480.0},
                 'F': {'density':1.418, 'MW':254.10}
@@ -172,7 +172,10 @@ if __name__=="__main__":
     model = args.model
     # FIT_KEYS = [116,118,129,125,127,132,134,135,136,138,139,140,931,932,933,964,965,970,971]
     # FIT_KEYS = [951,141,140,139,138,965,971,935,950,137,934,136,135,134,964,970]     # fit only the PEG based polymers
-    FIT_KEYS = [934,935] # fit only curves that have cylindrical micelle upturn at low q
+    # FIT_KEYS = [934,935] # fit only curves that have cylindrical micelle upturn at low q
+
+    # final identified samples that require micelle models
+    FIT_KEYS = [116,118,125,127,129,132,134,135,136,137,138,139,140,141,931,932,933,934,935,950,951,964,965,970,971]
 
     if not TESTING:
         SAVE_DIR = './results_PEG_%s/'%model
@@ -184,10 +187,11 @@ if __name__=="__main__":
     print('Saving the results to %s'%SAVE_DIR)
 
     SI = pd.read_csv(SI_FILE_LOC)
+    PEG_SI = SI[SI["EG_group"]=="PEG"]
     counter = 0
-    for key, values in SI.iterrows():
+    for key, values in PEG_SI.iterrows():
         if values['Sample'] in FIT_KEYS:
-            print('Fitting %d/%d'%(counter+1, len(FIT_KEYS)))
+            print('Fitting data number : %d'%(counter+1))
             fname = values['Filename']
             if TESTING:
                 fname = 'P50F50_10dTHF50.sub'
