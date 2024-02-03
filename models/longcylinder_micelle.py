@@ -4,38 +4,11 @@ Cylindrical core with Gaussian chain micelle model
 
 import numpy as np
 from math import expm1
-from sasmodels.special import sas_2J1x_x, sas_sinx_x
-from scipy.special import j0 as sas_J0x  
-import pdb
+from sasmodels.special import sas_2J1x_x, sas_sinx_x, sas_Si
+from scipy.special import j0 as sas_J0x 
 
-def orientational_average(f, alpha):
-    dt = np.asarray([np.sin(ai) for ai in alpha])
-    integrand = np.einsum('ij,j->ij', f, dt)
-
-    return np.trapz(integrand, x = alpha, axis=1)
-
-def psi(q, R, L, a):
-    x = np.einsum('i,j->ij', q*R, np.sin(a))
-    y = 0.5*np.einsum('i,j->ij', q*L, np.cos(a))
-
-    t1 = sas_2J1x_x(x)
-    t2 = sas_sinx_x(y)
-
-    return t1*t2
-
-def sigma(q, R, L, a):
-    x = np.einsum('i,j->ij', q*R, np.sin(a))
-    y = 0.5*np.einsum('i,j->ij', q*L, np.cos(a))
-
-    t1 = (R/(R+L))*(sas_2J1x_x(x))*np.cos(y)
-    t2 = (L/(R+L))*(sas_J0x(x))*(sas_sinx_x(y))
-
-    return t1+t2 
-
-
-
-name = "cylindrical_micelle"
-title = "Cylindrical core with a Gaussian chain micelle"
+name = "wormlike_micelle"
+title = "Very long cylindrical core with a Gaussian chain micelle"
 description = """ See J. Appl. Cryst. (2000). 33, 637±640
       """
 category = "shape:cylinder"
@@ -73,11 +46,16 @@ def Iq(q,
 
     beta_core = v_core * (rho_core - rho_solv)
     beta_corona = v_corona * (rho_corona - rho_solv)
-    alpha = np.linspace(0, np.pi, num=200)
 
     # Self-correlation term of the core
-    bes_core = psi(q, radius_core, length_core, alpha)
-    Fs = orientational_average(bes_core**2, alpha)
+    ff_crossec = sas_2J1x_x(q*radius_core)
+    ff_thinrod_term1 = sas_Si(q*length_core)/(q*length_core)
+    ff_thinrod_term2 = sas_sinx_x((q*length_core)/2)
+    ff_thinrod = 2*ff_thinrod_term1 - np.power(ff_thinrod_term2, 2)
+
+    # print(ff_crossec, ff_thinrod_term1, ff_thinrod_term2)
+
+    Fs = np.power(ff_crossec, 2)*ff_thinrod
     term1 = np.power(n_aggreg*beta_core, 2)*Fs 
 
     # Self-correlation term of the chains
@@ -90,23 +68,22 @@ def Iq(q,
     qrg = q*rg
     chain_ampl = -np.vectorize(expm1)(-qrg)/qrg
     chain_ampl[qrg==0.0] =  1.0 
-    bes_corona = sigma(q,
-                       radius_core+ d_penetration*rg,
-                       length_core+ 2*d_penetration*rg,
-                       alpha
-                       )
-    Ssc = chain_ampl*orientational_average(bes_core*bes_corona, alpha)
+    ff_chain = sas_J0x(q*(radius_core + (d_penetration*rg)))
+    Ssc = chain_ampl*ff_crossec*ff_chain*ff_thinrod
     term3 = 2.0 * (n_aggreg**2) * beta_core * beta_corona * Ssc
 
     # Interference cross-term between chains
-    Scc = (chain_ampl**2)*orientational_average(bes_corona**2, alpha)
+    Scc = (chain_ampl**2) * (ff_chain**2) * ff_thinrod
     term4 = n_aggreg * (n_aggreg - 1.0)* (beta_corona**2)*Scc
 
     # I(q)_micelle : Sum of 4 terms computed above
     i_micelle = term1 + term2 + term3 + term4 
+    # i_micelle = term1   
+    # print('Different terms : ', term1, term2, term3, term4)
 
     # Normalize intensity by total volume
     return i_micelle/v_total
+
 
 Iq.vectorized = True  # Iq does not accept an array of q values
 
