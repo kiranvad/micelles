@@ -24,6 +24,7 @@ parameters = [["v_core",    "Ang^3",  4000.0, [0.0, np.inf], "", "Volume of the 
               ["n_aggreg",      "",           67.0,  [0.0, np.inf], "", "Aggregation number of the micelle"],            
              ]
 
+
 def Iq(q,
         v_core=4000,
         v_corona=4000,
@@ -33,8 +34,10 @@ def Iq(q,
         radius_core=40,
         rg=10,
         d_penetration=1,
-        n_aggreg=67):
-    n_aggreg = (4/3)*np.pi*(radius_core**3)/v_core
+        n_aggreg=67,
+        x_solv = 0.0
+        ):
+    radius_core = np.power((n_aggreg*v_core)/(1-x_solv)*(3/(4*np.pi)), 1/3)
     v_total = n_aggreg*(v_core+v_corona)
     rho_solv = sld_solvent     # sld of solvent [1/A^2]
     rho_core = sld_core        # sld of core [1/A^2]
@@ -53,11 +56,11 @@ def Iq(q,
     debye_chain[qrg2==0.0] = 1.0
     term2 = n_aggreg * beta_corona * beta_corona * debye_chain
 
+
     # Interference cross-term between core and chains
-    qrg = q*rg
-    chain_ampl = -np.vectorize(expm1)(-qrg)/qrg
-    chain_ampl[qrg==0.0] =  1.0 
-    bes_corona = sas_sinx_x(q*(radius_core + d_penetration * rg))
+    chain_ampl = -np.vectorize(expm1)(-qrg2)/qrg2
+    chain_ampl[qrg2==0.0] =  1.0 
+    bes_corona = sas_sinx_x(q*(radius_core + (d_penetration * rg)))
     term3 = 2.0 * n_aggreg * n_aggreg * beta_core * beta_corona * bes_core * chain_ampl * bes_corona
 
     # Interference cross-term between chains
