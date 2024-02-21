@@ -87,9 +87,8 @@ def Iq(q,
     term2 = n_aggreg * (beta_corona**2) * debye_chain
 
     # Interference cross-term between core and chains
-    qrg = q*rg
-    chain_ampl = -np.vectorize(expm1)(-qrg)/qrg
-    chain_ampl[qrg==0.0] =  1.0 
+    chain_ampl = -np.vectorize(expm1)(-qrg2)/qrg2
+    chain_ampl[qrg2==0.0] =  1.0 
     bes_corona = sigma(q,
                        radius_core+ d_penetration*rg,
                        length_core+ 2*d_penetration*rg,
@@ -106,7 +105,7 @@ def Iq(q,
     i_micelle = term1 + term2 + term3 + term4 
 
     # Normalize intensity by total volume
-    return i_micelle/v_total
+    return i_micelle
 
 Iq.vectorized = True  # Iq does not accept an array of q values
 

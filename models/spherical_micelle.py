@@ -3,7 +3,6 @@ Spherical core with Gaussian chain micelle model
 """
 
 import numpy as np
-from math import expm1 
 from sasmodels.special import sas_3j1x_x, sas_sinx_x
 
 name = "spherical_micelle"
@@ -21,7 +20,8 @@ parameters = [["v_core",    "Ang^3",  4000.0, [0.0, np.inf], "", "Volume of the 
               ["radius_core",   "Ang",       40.0,  [0.0, np.inf], "volume", "Radius of core ( must be >> rg )"],
               ["rg",    "Ang",       10.0,  [0.0, np.inf], "volume", "Radius of gyration of chains in corona"],
               ["d_penetration", "",           1.0,  [0.0, np.inf], "", "Factor to mimic non-penetration of Gaussian chains"],
-              ["n_aggreg",      "",           67.0,  [0.0, np.inf], "", "Aggregation number of the micelle"],            
+              ["n_aggreg",      "",           67.0,  [0.0, np.inf], "", "Aggregation number of the micelle"],    
+              ["x_solv",      "",           0.0,  [0.0, 1.0], "", "Core solvation fraction"],        
              ]
 
 
@@ -52,13 +52,12 @@ def Iq(q,
 
     # Self-correlation term of the chains
     qrg2 = np.power(q*rg, 2)
-    debye_chain = 2.0*(np.vectorize(expm1)(-qrg2)+qrg2)/(qrg2**2) 
+    debye_chain = 2.0*(np.vectorize(np.expm1)(-qrg2)+qrg2)/(qrg2**2) 
     debye_chain[qrg2==0.0] = 1.0
     term2 = n_aggreg * beta_corona * beta_corona * debye_chain
 
-
     # Interference cross-term between core and chains
-    chain_ampl = -np.vectorize(expm1)(-qrg2)/qrg2
+    chain_ampl = -np.vectorize(np.expm1)(-qrg2)/qrg2
     chain_ampl[qrg2==0.0] =  1.0 
     bes_corona = sas_sinx_x(q*(radius_core + (d_penetration * rg)))
     term3 = 2.0 * n_aggreg * n_aggreg * beta_core * beta_corona * bes_core * chain_ampl * bes_corona
@@ -69,7 +68,7 @@ def Iq(q,
     # I(q)_micelle : Sum of 4 terms computed above
     i_micelle = term1 + term2 + term3 + term4
 
-    return i_micelle/v_total
+    return i_micelle
 
 Iq.vectorized = True  # Iq accepts an array of q values
 
