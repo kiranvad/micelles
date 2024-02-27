@@ -68,7 +68,7 @@ def Iq(q,
     # I(q)_micelle : Sum of 4 terms computed above
     i_micelle = term1 + term2 + term3 + term4
 
-    return i_micelle
+    return i_micelle/v_total
 
 Iq.vectorized = True  # Iq accepts an array of q values
 

@@ -44,8 +44,8 @@ category = "shape:cylinder"
 parameters = [["v_core",    "Ang^3",  4000.0, [0.0, np.inf], "", "Volume of the core (single block)"],
               ["v_corona",      "Ang^3",      4000.0, [0.0, np.inf], "", "Volume of the corona (single block)"],
               ["sld_solvent",  "Ang^-2",     1.0, [0.0, np.inf], "sld", "Solvent scattering length density"],
-              ["sld_core",      "1e-6/Ang^2", 2.0, [0.0, np.inf], "sld", "Core scattering length density"],
-              ["sld_corona",    "1e-6/Ang^2", 2.0,  [0.0, np.inf], "sld", "Corona scattering length density"],
+              ["sld_core",      "Ang^-2", 2.0, [0.0, np.inf], "sld", "Core scattering length density"],
+              ["sld_corona",    "Ang^-2", 2.0,  [0.0, np.inf], "sld", "Corona scattering length density"],
               ["radius_core",   "Ang",       40.0,  [0.0, np.inf], "volume", "Radius of core ( must be >> rg )"],
               ["length_core",   "Ang",       100.0,  [0.0, np.inf], "volume", "Length of core ( must be >> rg )"],              
               ["rg",    "Ang",       10.0,  [0.0, np.inf], "volume", "Radius of gyration of chains in corona"],
@@ -73,7 +73,7 @@ def Iq(q,
 
     beta_core = v_core * (rho_core - rho_solv)
     beta_corona = v_corona * (rho_corona - rho_solv)
-    alpha = np.linspace(0, np.pi, num=200)
+    alpha = np.linspace(0, np.pi, num=100)
 
     # Self-correlation term of the core
     bes_core = psi(q, radius_core, length_core, alpha)
@@ -105,7 +105,7 @@ def Iq(q,
     i_micelle = term1 + term2 + term3 + term4 
 
     # Normalize intensity by total volume
-    return i_micelle
+    return i_micelle/v_total
 
 Iq.vectorized = True  # Iq does not accept an array of q values
 
