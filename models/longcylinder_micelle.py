@@ -81,7 +81,7 @@ def Iq(q,
     # print('Different terms : ', term1, term2, term3, term4)
 
     # Normalize intensity by total volume
-    return i_micelle/v_total
+    return i_micelle/1.0
 
 
 Iq.vectorized = True  # Iq does not accept an array of q values

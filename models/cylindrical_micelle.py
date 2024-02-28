@@ -73,7 +73,7 @@ def Iq(q,
 
     beta_core = v_core * (rho_core - rho_solv)
     beta_corona = v_corona * (rho_corona - rho_solv)
-    alpha = np.linspace(0, np.pi, num=100)
+    alpha = np.linspace(0, 0.5*np.pi, num=5000)
 
     # Self-correlation term of the core
     bes_core = psi(q, radius_core, length_core, alpha)
@@ -105,7 +105,7 @@ def Iq(q,
     i_micelle = term1 + term2 + term3 + term4 
 
     # Normalize intensity by total volume
-    return i_micelle/v_total
+    return i_micelle/1.0
 
 Iq.vectorized = True  # Iq does not accept an array of q values
 

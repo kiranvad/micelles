@@ -37,7 +37,7 @@ def Iq(q,
         n_aggreg=67,
         x_solv = 0.0
         ):
-    radius_core = np.power((n_aggreg*v_core)/(1-x_solv)*(3/(4*np.pi)), 1/3)
+    n_aggreg = ((1-x_solv)*(4/3)*np.pi*(radius_core**3))/v_core
     v_total = n_aggreg*(v_core+v_corona)
     rho_solv = sld_solvent     # sld of solvent [1/A^2]
     rho_core = sld_core        # sld of core [1/A^2]
@@ -45,6 +45,7 @@ def Iq(q,
 
     beta_core = v_core * (rho_core - rho_solv)
     beta_corona = v_corona * (rho_corona - rho_solv)
+    beta_total = (beta_core+beta_corona)*n_aggreg
 
     # Self-correlation term of the core
     bes_core = sas_3j1x_x(q*radius_core)
@@ -68,7 +69,7 @@ def Iq(q,
     # I(q)_micelle : Sum of 4 terms computed above
     i_micelle = term1 + term2 + term3 + term4
 
-    return i_micelle/v_total
+    return i_micelle/(1.0)
 
 Iq.vectorized = True  # Iq accepts an array of q values
 
